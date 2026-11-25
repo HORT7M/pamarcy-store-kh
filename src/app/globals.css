@@ -61,7 +61,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: var(--font-inter), var(--font-khmer), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), var(--font-khmer), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
@@ -75,6 +75,12 @@
   /* Khmer script needs extra line-height to avoid clipping subscripts */
   html[lang="km"] body {
     line-height: 1.7;
+  }
+  html[lang="vi"] body {
+    line-height: 1.6;
+  }
+  html[lang="zh-CN"] body {
+    line-height: 1.65;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {

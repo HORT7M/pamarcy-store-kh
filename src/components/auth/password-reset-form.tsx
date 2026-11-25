@@ -20,7 +20,7 @@ function formatCountdown(seconds: number) {
 }
 
 export function PasswordResetForm({ mode }: { mode: "request" | "confirm" }) {
-  const { t } = useI18n();
+  const { t, tError } = useI18n();
   const router = useRouter();
   const sp = useSearchParams();
   const token = sp.get("token")?.trim() ?? "";
@@ -69,7 +69,7 @@ export function PasswordResetForm({ mode }: { mode: "request" | "confirm" }) {
         setCooldown(Math.ceil(fe.retryAfter));
       }
       bot.handleError(fe, identifier.trim());
-      toast.error(fe.message);
+      toast.error(tError(fe.message));
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ export function PasswordResetForm({ mode }: { mode: "request" | "confirm" }) {
       return;
     }
     if (newPassword !== confirm) {
-      toast.error("Passwords do not match");
+      toast.error(t("common.passwordsMismatch"));
       return;
     }
     if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) {
@@ -109,7 +109,7 @@ export function PasswordResetForm({ mode }: { mode: "request" | "confirm" }) {
         setCooldown(Math.ceil(fe.retryAfter));
       }
       bot.handleError(fe);
-      toast.error(fe.message);
+      toast.error(tError(fe.message));
     } finally {
       setLoading(false);
     }
@@ -184,7 +184,7 @@ export function PasswordResetForm({ mode }: { mode: "request" | "confirm" }) {
             type="button"
             onClick={() => setShow((s) => !s)}
             className="absolute right-2.5 top-2 text-muted-foreground"
-            aria-label="toggle password"
+            aria-label={t("auth.togglePassword")}
           >
             {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
           </button>

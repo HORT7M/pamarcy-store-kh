@@ -1,9 +1,9 @@
-import { requireStaff } from "@/lib/auth/session";
+import { requireStaffPage } from "@/lib/auth/guards";
 import { ReportsClient } from "@/components/admin/reports-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminReportsPage() {
-  await requireStaff("reports.view");
+  await requireStaffPage("reports.view");
   return <ReportsClient />;
 }

@@ -2,11 +2,13 @@ import type { Prisma } from "@prisma/client";
 import { apiHandler, parseBody, parseQuery, paginate } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { requireStaff } from "@/lib/auth/session";
+import { roleHas } from "@/lib/auth/permissions";
 import { adminMedicinesQuerySchema, medicineSchema } from "@/lib/validators";
+import { MEDICINE_WRITE_FIELDS, pickAllowed } from "@/lib/allowlist";
 import { audit } from "@/lib/audit";
 import { stockIn, getAvailability } from "@/lib/services/inventory";
 import { parseDateInput } from "@/lib/date";
-import { badRequest } from "@/lib/errors";
+import { badRequest, forbidden } from "@/lib/errors";
 import { slugify } from "@/lib/slug";
 
 export const GET = apiHandler(async (req) => {
@@ -36,7 +38,12 @@ export const GET = apiHandler(async (req) => {
 
 export const POST = apiHandler(async (req) => {
   const user = await requireStaff("medicines.write");
-  const { minStock, location, initialStock, ...data } = await parseBody(req, medicineSchema);
+  const parsed = await parseBody(req, medicineSchema);
+  const { minStock, location, initialStock } = parsed;
+  if (initialStock && !roleHas(user.role, "inventory.write")) {
+    throw forbidden("You do not have permission to add opening stock");
+  }
+  const data = pickAllowed(parsed, MEDICINE_WRITE_FIELDS);
   if (data.compareAtPrice && data.compareAtPrice <= data.price) data.compareAtPrice = null;
 
   const cat = await prisma.category.findFirst({ where: { id: data.categoryId, deletedAt: null }, select: { id: true } });
@@ -55,11 +62,24 @@ export const POST = apiHandler(async (req) => {
   let slug = slugify(`${data.nameEn}-${data.sku}`);
   if (await prisma.medicine.findUnique({ where: { slug } })) slug = `${slug}-${Date.now().toString(36)}`;
   const med = await prisma.$transaction(async (tx) => {
-    const m = await tx.medicine.create({ data: { ...data, slug, imageUrl: data.imageUrl ?? data.images[0] ?? null, inventory: { create: { minStock, location } } } });
+    const m = await tx.medicine.create({
+      data: {
+        ...data,
+        slug,
+        imageUrl: data.imageUrl ?? data.images[0] ?? null,
+        inventory: { create: { minStock, location } },
+      },
+    });
     if (initialStock) {
       await stockIn(tx, {
-        medicineId: m.id, batchNumber: initialStock.batchNumber, quantity: initialStock.quantity, costPrice: initialStock.costPrice ?? data.costPrice,
-        expiryDate: initialStock.expiryDate ? parseDateInput(initialStock.expiryDate) : null, reason: "Opening stock", userId: user.id,
+        medicineId: m.id,
+        batchNumber: initialStock.batchNumber,
+        quantity: initialStock.quantity,
+        costPrice: initialStock.costPrice ?? data.costPrice,
+        expiryDate: initialStock.expiryDate ? parseDateInput(initialStock.expiryDate) : null,
+        reason: "Opening stock",
+        userId: user.id,
+        type: "STOCK_IN",
       });
     }
     return m;

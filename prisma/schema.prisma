@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ───────────────────────────── Enums ─────────────────────────────
@@ -129,7 +130,9 @@ model RolePermission {
 model User {
   id            String         @id @default(cuid())
   email         String         @unique
+  emailHash     String?        @unique
   phone         String?        @unique
+  phoneHash     String?        @unique
   passwordHash  String
   name          String
   roleId        String
@@ -185,7 +188,7 @@ model Customer {
   id          String     @id @default(cuid())
   userId      String     @unique
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  dateOfBirth DateTime?
+  dateOfBirth String?
   gender      String?
   notes       String?
   addresses   Address[]
@@ -445,10 +448,12 @@ model Order {
   prescriptionNote   String?
   reviewedById       String?
   reviewedAt         DateTime?
-  // delivery snapshot
+  // delivery snapshot (encrypted at rest; blind-indexed for exact lookups)
   fullName           String
   phone              String
+  phoneHash          String?
   email              String?
+  emailHash          String?
   province           String?
   district           String?
   commune            String?
@@ -481,6 +486,8 @@ model Order {
   @@index([paymentStatus])
   @@index([createdAt])
   @@index([channel])
+  @@index([phoneHash])
+  @@index([emailHash])
 }
 
 model OrderItem {

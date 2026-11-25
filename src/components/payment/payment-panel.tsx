@@ -41,10 +41,10 @@ function CopyRow({ label, value, mono }: { label: string; value: string; mono?: 
  * Renders a payment request (KHQR / USDT / PayPal) and polls the SERVER for status.
  * The UI never decides that a payment succeeded – it only displays what the backend verified.
  */
-export function PaymentPanel({ payment: initial, checkUrl, hashUrl, captureUrl, onPaid, onRetry, compact }: {
-  payment: PaymentViewDto; checkUrl: string; hashUrl?: string; captureUrl?: string; onPaid?: (p: PaymentViewDto) => void; onRetry?: () => void; compact?: boolean;
+export function PaymentPanel({ payment: initial, checkUrl, hashUrl, captureUrl, requestHeaders, onPaid, onRetry, compact }: {
+  payment: PaymentViewDto; checkUrl: string; hashUrl?: string; captureUrl?: string; requestHeaders?: Record<string, string>; onPaid?: (p: PaymentViewDto) => void; onRetry?: () => void; compact?: boolean;
 }) {
-  const { t } = useI18n();
+  const { t, tError } = useI18n();
   const [p, setP] = useState(initial);
   const [hash, setHash] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -60,13 +60,13 @@ export function PaymentPanel({ payment: initial, checkUrl, hashUrl, captureUrl, 
   const check = useCallback(async (manual = false) => {
     if (manual) setChecking(true);
     try {
-      setP(await api<PaymentViewDto>(checkUrl, { method: "POST" }));
+      setP(await api<PaymentViewDto>(checkUrl, { method: "POST", headers: requestHeaders }));
     } catch (e) {
-      if (manual) toast.error((e as Error).message);
+      if (manual) toast.error(tError((e as Error).message));
     } finally {
       if (manual) setChecking(false);
     }
-  }, [checkUrl]);
+  }, [checkUrl, requestHeaders, tError]);
 
   useEffect(() => {
     if (p.status !== "PENDING" && p.status !== "PROCESSING") return;
@@ -81,9 +81,9 @@ export function PaymentPanel({ payment: initial, checkUrl, hashUrl, captureUrl, 
     if (!hashUrl) return;
     setSubmitting(true);
     try {
-      setP(await api<PaymentViewDto>(hashUrl, { method: "POST", body: { txHash: hash } }));
+      setP(await api<PaymentViewDto>(hashUrl, { method: "POST", headers: requestHeaders, body: { txHash: hash } }));
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(tError((err as Error).message));
     } finally {
       setSubmitting(false);
     }

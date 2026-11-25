@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { decryptField } from "@/lib/crypto";
 import { TIMEZONE, addDays, dayKey, startOfDayPP, startOfMonthPP, startOfYearPP, formatDate } from "@/lib/date";
 import { badRequest } from "@/lib/errors";
 import { sellableCutoff } from "./inventory";
@@ -94,38 +95,66 @@ export async function stockOverview() {
   return r;
 }
 
-export async function dashboardData() {
+export type DashboardScope = {
+  ordersRead?: boolean;
+  paymentsRead?: boolean;
+  customersRead?: boolean;
+  inventoryRead?: boolean;
+  reportsView?: boolean;
+};
+
+const EMPTY_SALES = { revenue: 0, orders: 0, cost: 0, discount: 0, delivery: 0, items: 0 };
+
+export async function dashboardData(scope?: DashboardScope) {
+  const ordersRead = scope ? Boolean(scope.ordersRead) : true;
+  const paymentsRead = scope ? Boolean(scope.paymentsRead) : true;
+  const customersRead = scope ? Boolean(scope.customersRead) : true;
+  const inventoryRead = scope ? Boolean(scope.inventoryRead) : true;
+  const reportsView = scope ? Boolean(scope.reportsView) : true;
+  const canSeeSales = ordersRead || reportsView;
+
   const now = new Date();
   const today = startOfDayPP(now);
   const tomorrow = addDays(today, 1);
   const month = startOfMonthPP(now);
   const year = startOfYearPP(now);
   const epoch = new Date(0);
-  const [all, todayS, monthS, orderCounts, customers, medicines, stock, daily, monthly, yearly, top, payments, recent] = await Promise.all([
-    salesSummary(epoch, tomorrow),
-    salesSummary(today, tomorrow),
-    salesSummary(month, tomorrow),
-    prisma.order.groupBy({ by: ["status"], _count: true }),
-    prisma.customer.count({ where: { user: { deletedAt: null } } }),
+  const [all, todayS, monthS, orderCounts, customers, medicines, rawStock, rawDaily, rawMonthly, rawYearly, rawTop, payments, recent] = await Promise.all([
+    canSeeSales ? salesSummary(epoch, tomorrow) : Promise.resolve(EMPTY_SALES),
+    canSeeSales ? salesSummary(today, tomorrow) : Promise.resolve(EMPTY_SALES),
+    canSeeSales ? salesSummary(month, tomorrow) : Promise.resolve(EMPTY_SALES),
+    ordersRead ? prisma.order.groupBy({ by: ["status"], _count: true }) : Promise.resolve([]),
+    customersRead ? prisma.customer.count({ where: { user: { deletedAt: null } } }) : Promise.resolve(0),
     prisma.medicine.count({ where: { deletedAt: null } }),
     stockOverview(),
-    salesSeries(addDays(today, -29), tomorrow, "day"),
-    salesSeries(new Date(Date.UTC(Number(dayKey(now).slice(0, 4)) - 1, Number(dayKey(now).slice(5, 7)), 1, -7)), tomorrow, "month"),
-    salesSeries(new Date(Date.UTC(Number(dayKey(now).slice(0, 4)) - 4, 0, 1, -7)), tomorrow, "year"),
-    topMedicines(addDays(today, -89), tomorrow, 8),
-    paymentBreakdown(addDays(today, -89), tomorrow),
-    prisma.order.findMany({ orderBy: { createdAt: "desc" }, take: 8, select: { id: true, number: true, fullName: true, total: true, status: true, paymentStatus: true, channel: true, createdAt: true } }),
+    canSeeSales ? salesSeries(addDays(today, -29), tomorrow, "day") : Promise.resolve([]),
+    canSeeSales ? salesSeries(new Date(Date.UTC(Number(dayKey(now).slice(0, 4)) - 1, Number(dayKey(now).slice(5, 7)), 1, -7)), tomorrow, "month") : Promise.resolve([]),
+    canSeeSales ? salesSeries(new Date(Date.UTC(Number(dayKey(now).slice(0, 4)) - 4, 0, 1, -7)), tomorrow, "year") : Promise.resolve([]),
+    canSeeSales ? topMedicines(addDays(today, -89), tomorrow, 8) : Promise.resolve([]),
+    paymentsRead ? paymentBreakdown(addDays(today, -89), tomorrow) : Promise.resolve([]),
+    ordersRead
+      ? prisma.order.findMany({ orderBy: { createdAt: "desc" }, take: 8, select: { id: true, number: true, fullName: true, total: true, status: true, paymentStatus: true, channel: true, createdAt: true } })
+      : Promise.resolve([]),
   ]);
   const counts = Object.fromEntries(orderCounts.map((c) => [c.status, c._count])) as Record<string, number>;
   const totalOrders = Object.values(counts).reduce((a, b) => a + b, 0);
+  const stock = inventoryRead ? rawStock : { ...rawStock, costValue: 0, retailValue: 0 };
+  const stripProfit = <T extends { cost: number; profit: number }>(rows: T[]) =>
+    reportsView ? rows : rows.map((r) => ({ ...r, cost: 0, profit: 0 }));
+  const top = reportsView ? rawTop : rawTop.map((r) => ({ ...r, cost: 0 }));
   void year;
   return {
     totals: {
-      totalSales: all.revenue, todaySales: todayS.revenue, todayOrders: todayS.orders, monthRevenue: monthS.revenue, monthProfit: monthS.revenue - monthS.cost,
+      totalSales: all.revenue, todaySales: todayS.revenue, todayOrders: todayS.orders, monthRevenue: monthS.revenue, monthProfit: reportsView ? monthS.revenue - monthS.cost : 0,
       totalOrders, pendingOrders: counts.PENDING ?? 0, completedOrders: counts.DELIVERED ?? 0, customers, medicines,
       lowStock: stock.low, outOfStock: stock.out, expiredBatches: stock.expiredBatches, expiringSoon: stock.expiringSoon,
     },
-    stock, daily, monthly, yearly, top, recent,
+    stock,
+    daily: stripProfit(rawDaily),
+    monthly: stripProfit(rawMonthly),
+    yearly: stripProfit(rawYearly),
+    top,
+    recent,
     payments: Object.values(payments.reduce<Record<string, { method: string; paid: number; count: number; failed: number; pending: number }>>((acc, r) => {
       acc[r.method] ??= { method: r.method, paid: 0, count: 0, failed: 0, pending: 0 };
       if (r.status === "PAID") { acc[r.method].paid += r.amount; acc[r.method].count += r.count; }
@@ -196,7 +225,7 @@ export async function buildReport(type: ReportType, from: Date, to: Date, g: Gra
           MAX(o."createdAt") AS last, u."createdAt" AS joined
         FROM "Customer" c JOIN "User" u ON u.id=c."userId" LEFT JOIN "Order" o ON o."customerId"=c.id AND o."createdAt" >= ${from} AND o."createdAt" < ${to}
         WHERE u."deletedAt" IS NULL GROUP BY u.id ORDER BY spent DESC`;
-      return { title: `Customer report · ${period}`, columns: ["Name", "Email", "Phone", "Paid orders", "Spent (USD)", "Last order", "Joined"], rows: rows.map((r) => [r.name, r.email, r.phone ?? "", r.orders, money(r.spent), formatDate(r.last), formatDate(r.joined)]) };
+      return { title: `Customer report · ${period}`, columns: ["Name", "Email", "Phone", "Paid orders", "Spent (USD)", "Last order", "Joined"], rows: rows.map((r) => [decryptField(r.name, "User:name"), decryptField(r.email, "User:email"), decryptField(r.phone, "User:phone") ?? "", r.orders, money(r.spent), formatDate(r.last), formatDate(r.joined)]) };
     }
     case "profit-loss": {
       const s = await salesSummary(from, to);

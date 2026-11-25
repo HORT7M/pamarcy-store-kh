@@ -22,7 +22,7 @@ type OrderRow = {
 const STATUSES = ["", "PENDING", "CONFIRMED", "PROCESSING", "READY_FOR_DELIVERY", "SHIPPING", "DELIVERED", "CANCELLED"];
 
 export function OrdersClient() {
-  const { money } = useI18n();
+  const { money, t, tryT } = useI18n();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [channel, setChannel] = useState("");
@@ -46,48 +46,64 @@ export function OrdersClient() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Order Management" subtitle="Track online and POS orders, review prescriptions, fulfil stock and issue refunds" />
+      <PageHeader title={t("ordersAdmin.title")} subtitle={t("ordersAdmin.subtitle")} />
 
       <div className="flex flex-wrap gap-1.5">
         {STATUSES.map((s) => (
           <Button key={s || "all"} size="sm" variant={status === s ? "default" : "outline"} onClick={() => { setStatus(s); setPage(1); }}>
-            {s ? s.replace(/_/g, " ") : "All"}
+            {s ? tryT(`status.${s}`, s.replace(/_/g, " ")) : t("common.all")}
             {s && data?.counts[s] ? <span className="ml-1 rounded-full bg-black/10 px-1.5 text-[10px]">{data.counts[s]}</span> : null}
           </Button>
         ))}
         <Button size="sm" variant={rxOnly ? "destructive" : "outline"} onClick={() => { setRxOnly((r) => !r); setPage(1); }}>
-          <FileWarning className="size-3.5" /> Rx Pending Review
+          <FileWarning className="size-3.5" /> {t("ordersAdmin.rxPendingReview")}
         </Button>
       </div>
 
       <div className="flex flex-wrap gap-2 rounded-2xl border bg-white p-3 shadow-sm">
-        <div className="relative min-w-56 flex-1"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search order #, customer name, phone, email…" className="pl-9" /></div>
-        <select className={sel} value={channel} onChange={(e) => { setChannel(e.target.value); setPage(1); }}><option value="">All channels</option><option value="ONLINE">Online</option><option value="POS">POS</option></select>
-        <select className={sel} value={payment} onChange={(e) => { setPayment(e.target.value); setPage(1); }}><option value="">All payments</option>{["PENDING", "PROCESSING", "PAID", "FAILED", "EXPIRED", "REFUNDED"].map((p) => <option key={p} value={p}>{p}</option>)}</select>
+        <div className="relative min-w-56 flex-1"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder={t("ordersAdmin.searchPh")} className="pl-9" /></div>
+        <select className={sel} value={channel} onChange={(e) => { setChannel(e.target.value); setPage(1); }}>
+          <option value="">{t("ordersAdmin.allChannels")}</option>
+          <option value="ONLINE">{t("status.ONLINE")}</option>
+          <option value="POS">{t("status.POS")}</option>
+        </select>
+        <select className={sel} value={payment} onChange={(e) => { setPayment(e.target.value); setPage(1); }}>
+          <option value="">{t("ordersAdmin.allPayments")}</option>
+          {["PENDING", "PROCESSING", "PAID", "FAILED", "EXPIRED", "REFUNDED"].map((p) => <option key={p} value={p}>{tryT(`status.${p}`, p)}</option>)}
+        </select>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-            <tr><th className="p-3">Order #</th><th className="p-3">Customer</th><th className="p-3">Channel</th><th className="p-3">Order Status</th><th className="p-3">Payment</th><th className="p-3">Fulfilment</th><th className="p-3 text-right">Total</th><th className="p-3 text-right">Created</th></tr>
+            <tr>
+              <th className="p-3">{t("ordersAdmin.colOrderNo")}</th>
+              <th className="p-3">{t("ordersAdmin.colCustomer")}</th>
+              <th className="p-3">{t("ordersAdmin.colChannel")}</th>
+              <th className="p-3">{t("ordersAdmin.colOrderStatus")}</th>
+              <th className="p-3">{t("ordersAdmin.colPayment")}</th>
+              <th className="p-3">{t("ordersAdmin.colFulfilment")}</th>
+              <th className="p-3 text-right">{t("common.total")}</th>
+              <th className="p-3 text-right">{t("ordersAdmin.colCreated")}</th>
+            </tr>
           </thead>
           <tbody className="divide-y">
             {data?.items.map((o) => (
               <tr key={o.id} className="hover:bg-muted/30">
                 <td className="p-3">
                   <Link href={`/admin/orders/${o.id}`} className="font-mono font-semibold text-primary hover:underline">{o.number}</Link>
-                  <div className="text-[11px] text-muted-foreground">{o._count.items} item(s){o.prescriptionStatus === "PENDING_REVIEW" && <Badge className="ml-1 bg-amber-500 text-[10px] text-white">Rx</Badge>}</div>
+                  <div className="text-[11px] text-muted-foreground">{t("ordersAdmin.itemsCount", { n: o._count.items })}{o.prescriptionStatus === "PENDING_REVIEW" && <Badge className="ml-1 bg-amber-500 text-[10px] text-white">Rx</Badge>}</div>
                 </td>
                 <td className="p-3"><div className="font-medium">{o.fullName}</div><div className="text-xs text-muted-foreground">{formatKhPhone(o.phone)}</div></td>
-                <td className="p-3 text-xs"><Badge variant="secondary">{o.channel}</Badge></td>
+                <td className="p-3 text-xs"><Badge variant="secondary">{tryT(`status.${o.channel}`, o.channel)}</Badge></td>
                 <td className="p-3"><StatusBadge status={o.status} /></td>
-                <td className="p-3"><div className="flex items-center gap-1"><StatusBadge status={o.paymentStatus} />{o.payments[0] && <span className="text-[11px] text-muted-foreground">{o.payments[0].method.code}</span>}</div></td>
+                <td className="p-3"><div className="flex items-center gap-1"><StatusBadge status={o.paymentStatus} />{o.payments[0] && <span className="text-[11px] text-muted-foreground">{tryT(`catalogData.paymentMethods.${o.payments[0].method.code}`, o.payments[0].method.code)}</span>}</div></td>
                 <td className="p-3"><StatusBadge status={o.fulfillmentStatus} /></td>
                 <td className="p-3 text-right font-semibold">{money(o.total)}</td>
                 <td className="whitespace-nowrap p-3 text-right text-xs text-muted-foreground">{formatDateTime(o.createdAt)}</td>
               </tr>
             ))}
-            {data && data.items.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No orders found.</td></tr>}
+            {data && data.items.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">{t("ordersAdmin.noOrders")}</td></tr>}
           </tbody>
         </table>
       </div>

@@ -5,7 +5,8 @@
  * No online payment is ever marked paid here — online seed orders stay PENDING.
  */
 import { existsSync } from "node:fs";
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import { withFieldEncryption } from "../src/lib/db-encryption";
 import bcrypt from "bcryptjs";
 
 if (existsSync(".env") && typeof process.loadEnvFile === "function") {
@@ -24,7 +25,11 @@ import { CATEGORIES, BRANDS, MEDICINES } from "./seed-data";
 import { DEFAULT_SETTINGS } from "../src/lib/settings";
 import { USDT_NETWORK_META } from "../src/lib/services/payments/config";
 
-const prisma = new PrismaClient();
+const seedBasePrisma = new PrismaClient({
+  datasources: { db: { url: process.env.DIRECT_URL || process.env.DATABASE_URL } },
+});
+const prisma = withFieldEncryption(seedBasePrisma);
+
 const DAY = 86400000;
 const pp = (daysFromNow: number) => {
   const d = new Date(Date.now() + daysFromNow * DAY);

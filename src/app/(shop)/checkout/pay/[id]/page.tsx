@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { assertOrderAccess, orderAccessToken } from "@/lib/order-access";
+import { assertOnlineOrderPayAccess } from "@/lib/order-access";
 import { paymentView } from "@/lib/services/payments";
 import { availableMethods } from "@/lib/services/payments/config";
 import { PayClient } from "@/components/payment/pay-client";
@@ -15,8 +15,10 @@ export default async function PayPage({ params, searchParams }: { params: Promis
   const sp = await searchParams;
   if (!ENTITY_ID_RE.test(id)) notFound();
   const token = typeof sp.token === "string" && ORDER_ACCESS_TOKEN_RE.test(sp.token) ? sp.token : undefined;
+  let accessVia: "staff" | "customer" | "token" = "customer";
   try {
-    await assertOrderAccess(id, token);
+    const access = await assertOnlineOrderPayAccess(id, token);
+    accessVia = access.via;
   } catch (e) {
     if (e instanceof ApiError) notFound();
     throw e;
@@ -36,7 +38,7 @@ export default async function PayPage({ params, searchParams }: { params: Promis
         reservationExpiresAt: order.reservationExpiresAt?.toISOString() ?? null, customerId: order.customerId,
         items: order.items.map((i) => ({ id: i.id, nameEn: i.nameEn, nameKm: i.nameKm, quantity: i.quantity, lineTotal: i.lineTotal.toString() })),
       }}
-      token={orderAccessToken(order.id)}
+      token={accessVia === "token" && token ? token : ""}
       methods={methods}
       initialPayment={view ? JSON.parse(JSON.stringify(view)) : null}
       paypalReturn={sp.paypal === "return" ? "return" : sp.paypal === "cancel" ? "cancel" : null}

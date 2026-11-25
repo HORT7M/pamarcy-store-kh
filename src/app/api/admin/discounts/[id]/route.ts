@@ -2,6 +2,7 @@ import { apiHandler, parseBody, parseParams } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { requireStaff } from "@/lib/auth/session";
 import { discountSchema, idParamSchema } from "@/lib/validators";
+import { DISCOUNT_WRITE_FIELDS, pickAllowed } from "@/lib/allowlist";
 import { audit } from "@/lib/audit";
 import { parseDateInput, addDays } from "@/lib/date";
 import { notFound } from "@/lib/errors";
@@ -12,7 +13,15 @@ export const PUT = apiHandler<{ id: string }>(async (req, { params }) => {
   const existing = await prisma.discount.findFirst({ where: { id, deletedAt: null }, select: { id: true } });
   if (!existing) throw notFound("Discount not found");
   const b = await parseBody(req, discountSchema);
-  const d = await prisma.discount.update({ where: { id }, data: { ...b, startsAt: b.startsAt ? parseDateInput(b.startsAt) : null, endsAt: b.endsAt ? addDays(parseDateInput(b.endsAt), 1) : null } });
+  const allowed = pickAllowed(b, DISCOUNT_WRITE_FIELDS);
+  const d = await prisma.discount.update({
+    where: { id },
+    data: {
+      ...allowed,
+      startsAt: b.startsAt ? parseDateInput(b.startsAt) : null,
+      endsAt: b.endsAt ? addDays(parseDateInput(b.endsAt), 1) : null,
+    },
+  });
   await audit(user.id, "discount.update", "Discount", id, { code: d.code });
   return d;
 });

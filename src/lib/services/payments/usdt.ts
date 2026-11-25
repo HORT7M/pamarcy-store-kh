@@ -93,13 +93,17 @@ async function tron<T>(path: string, body?: unknown): Promise<T> {
   if (serverEnv.trongrid.apiKey) headers["TRON-PRO-API-KEY"] = serverEnv.trongrid.apiKey;
   let res: Response | undefined;
   for (let attempt = 0; attempt < 3; attempt++) {
-    res = await fetch(base + path, {
-      method: body ? "POST" : "GET",
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-      cache: "no-store",
-      signal: AbortSignal.timeout(15000),
-    });
+    try {
+      res = await fetch(base + path, {
+        method: body ? "POST" : "GET",
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        cache: "no-store",
+        signal: AbortSignal.timeout(15000),
+      });
+    } catch {
+      throw new ApiError(502, "CHAIN_UPSTREAM", "TronGrid upstream request failed");
+    }
     if (res.status !== 429) break;
     await new Promise((r) => setTimeout(r, 1200 * (attempt + 1)));
   }
@@ -160,13 +164,19 @@ async function findTron(cfg: UsdtNetworkConfig, expectedUnits: bigint, notBefore
 // ───────────── EVM (ERC-20 / BEP-20 / Polygon) via JSON-RPC ─────────────
 
 async function rpc<T>(url: string, method: string, params: unknown[]): Promise<T> {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-    cache: "no-store",
-    signal: AbortSignal.timeout(15000),
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch {
+    // Never include RPC URL (which may contain an embedded API key) in error messages or logs
+    throw new ApiError(502, "CHAIN_UPSTREAM", `RPC request failed (${method})`);
+  }
   if (!res.ok) throw new ApiError(502, "CHAIN_UPSTREAM", `RPC error ${res.status}`);
   const j = (await res.json()) as { result?: T; error?: { message: string } };
   if (j.error) throw new ApiError(502, "CHAIN_UPSTREAM", j.error.message);

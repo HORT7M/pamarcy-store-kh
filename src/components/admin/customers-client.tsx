@@ -14,7 +14,7 @@ import { api } from "@/lib/fetcher";
 type CustRow = { id: string; spent: number; _count: { orders: number }; user: { name: string; email: string; phone: string | null; status: string; lastLoginAt: string | null; createdAt: string } };
 
 export function CustomersClient() {
-  const { money } = useI18n();
+  const { money, t } = useI18n();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
@@ -30,17 +30,26 @@ export function CustomersClient() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Customer Management" subtitle="View registered customers, purchase history and manage account status" />
+      <PageHeader title={t("customersAdmin.title")} subtitle={t("customersAdmin.subtitle")} />
       <div className="flex flex-wrap gap-2 rounded-2xl border bg-white p-3 shadow-sm">
-        <div className="relative min-w-56 flex-1"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search customer name, email or +855 phone…" className="pl-9" /></div>
+        <div className="relative min-w-56 flex-1"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder={t("customersAdmin.searchPh")} className="pl-9" /></div>
         <select className="h-9 rounded-md border bg-white px-3 text-sm" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
-          <option value="">All accounts</option><option value="ACTIVE">Active</option><option value="SUSPENDED">Suspended</option>
+          <option value="">{t("customersAdmin.allAccounts")}</option>
+          <option value="ACTIVE">{t("status.ACTIVE")}</option>
+          <option value="SUSPENDED">{t("status.SUSPENDED")}</option>
         </select>
       </div>
       <div className="overflow-x-auto rounded-2xl border bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-            <tr><th className="p-3">Customer</th><th className="p-3">Phone</th><th className="p-3">Status</th><th className="p-3 text-right">Orders</th><th className="p-3 text-right">Total Spent</th><th className="p-3 text-right">Joined</th></tr>
+            <tr>
+              <th className="p-3">{t("customersAdmin.colCustomer")}</th>
+              <th className="p-3">{t("common.phone")}</th>
+              <th className="p-3">{t("common.status")}</th>
+              <th className="p-3 text-right">{t("customersAdmin.colOrders")}</th>
+              <th className="p-3 text-right">{t("customersAdmin.colTotalSpent")}</th>
+              <th className="p-3 text-right">{t("customersAdmin.colJoined")}</th>
+            </tr>
           </thead>
           <tbody className="divide-y">
             {data?.items.map((c) => (

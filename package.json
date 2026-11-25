@@ -16,7 +16,13 @@
     "db:backup": "bash scripts/backup-db.sh",
     "images:fetch": "node scripts/fetch-images.mjs",
     "test": "tsx --env-file-if-exists=.env --conditions=react-server --test scripts/tests/*.test.mts",
-    "cron": "node --env-file-if-exists=.env scripts/cron.mjs"
+    "cron": "node --env-file-if-exists=.env scripts/cron.mjs",
+    "db:encrypt": "tsx --env-file-if-exists=.env --conditions=react-server scripts/encrypt-data.mts",
+    "db:encrypt:verify": "tsx --env-file-if-exists=.env --conditions=react-server scripts/encrypt-data.mts --verify",
+    "db:encrypt:rotate": "tsx --env-file-if-exists=.env --conditions=react-server scripts/encrypt-data.mts --rotate",
+    "db:backup:verify": "node --env-file-if-exists=.env scripts/backup-encrypt.mjs verify",
+    "db:harden-permissions": "node --env-file-if-exists=.env scripts/harden-db-permissions.mjs",
+    "db:verify-permissions": "node --env-file-if-exists=.env scripts/harden-db-permissions.mjs --verify"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

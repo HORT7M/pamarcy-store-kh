@@ -2,34 +2,43 @@ import { apiHandler, parseBody, parseParams } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { requireCustomer } from "@/lib/auth/session";
 import { addressSchema, idParamSchema } from "@/lib/validators";
+import { ADDRESS_WRITE_FIELDS, pickAllowed } from "@/lib/allowlist";
 import { notFound } from "@/lib/errors";
 import { addressSelect } from "@/lib/public-select";
-
-async function own(id: string, customerId: string) {
-  const a = await prisma.address.findUnique({ where: { id } });
-  if (!a || a.customerId !== customerId) throw notFound("Address not found");
-  return a;
-}
 
 export const PUT = apiHandler<{ id: string }>(async (req, { params }) => {
   const { id } = await parseParams(params, idParamSchema);
   const u = await requireCustomer();
-  await own(id, u.customerId);
   const body = await parseBody(req, addressSchema);
+  const allowed = pickAllowed(body, ADDRESS_WRITE_FIELDS);
   return prisma.$transaction(async (tx) => {
-    if (body.isDefault) await tx.address.updateMany({ where: { customerId: u.customerId }, data: { isDefault: false } });
-    return tx.address.update({ where: { id }, data: body, select: addressSelect });
+    const existing = await tx.address.findFirst({ where: { id, customerId: u.customerId }, select: { id: true } });
+    if (!existing) throw notFound("Address not found");
+    if (allowed.isDefault) {
+      await tx.address.updateMany({ where: { customerId: u.customerId }, data: { isDefault: false } });
+    }
+    return tx.address.update({
+      where: { id: existing.id, customerId: u.customerId },
+      data: allowed,
+      select: addressSelect,
+    });
   });
 });
 
 export const DELETE = apiHandler<{ id: string }>(async (_req, { params }) => {
   const { id } = await parseParams(params, idParamSchema);
   const u = await requireCustomer();
-  const a = await own(id, u.customerId);
-  await prisma.address.delete({ where: { id } });
-  if (a.isDefault) {
-    const next = await prisma.address.findFirst({ where: { customerId: u.customerId }, orderBy: { createdAt: "desc" } });
-    if (next) await prisma.address.update({ where: { id: next.id }, data: { isDefault: true } });
-  }
+  await prisma.$transaction(async (tx) => {
+    const existing = await tx.address.findFirst({ where: { id, customerId: u.customerId }, select: { id: true, isDefault: true } });
+    if (!existing) throw notFound("Address not found");
+    const del = await tx.address.deleteMany({ where: { id: existing.id, customerId: u.customerId } });
+    if (del.count !== 1) throw notFound("Address not found");
+    if (existing.isDefault) {
+      const next = await tx.address.findFirst({ where: { customerId: u.customerId }, orderBy: { createdAt: "desc" }, select: { id: true } });
+      if (next) {
+        await tx.address.update({ where: { id: next.id, customerId: u.customerId }, data: { isDefault: true } });
+      }
+    }
+  });
   return { ok: true };
 });

@@ -7,6 +7,7 @@ import { v2 as cloudinary } from "cloudinary";
 import type { Permission } from "./auth/permissions";
 import { getAuthSecret, serverEnv } from "./env";
 import { badRequest, notFound, payloadTooLarge, unsupportedMedia } from "./errors";
+import { decryptBuffer, encryptBuffer, isEncryptedBuffer, isStrictEncryptionMode, MAX_ENCRYPTED_FILE_OVERHEAD } from "./crypto";
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MiB
 export const MULTIPART_OVERHEAD_BYTES = 64 * 1024; // 64 KiB multipart framing budget
@@ -880,29 +881,35 @@ export async function storeUpload(
   const id = randomUUID();
   const fileName = `${id}.${validated.ext}`;
 
+  // Encrypt confidential patient prescriptions with AES-256-GCM before persisting to cloud or disk
+  const payloadToStore =
+    folder === "prescriptions"
+      ? encryptBuffer(validated.buffer, "file-rx", `prescription:${fileName}`)
+      : validated.buffer;
+
   if (serverEnv.cloudinary.configured) {
     configureCloudinary();
+    const isRx = folder === "prescriptions";
     const res = await new Promise<{ secure_url: string }>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
           folder: `pamarcy/${folder}`,
-          public_id: id,
-          resource_type: validated.ext === "pdf" ? "raw" : "image",
-          allowed_formats: validated.ext === "pdf" ? undefined : ["jpg", "png", "webp"],
+          public_id: isRx ? `${id}.enc` : id,
+          resource_type: isRx || validated.ext === "pdf" ? "raw" : "image",
+          allowed_formats: isRx || validated.ext === "pdf" ? undefined : ["jpg", "png", "webp"],
           overwrite: false,
           invalidate: false,
-          // Prescriptions contain confidential health data -> authenticated delivery only
-          type: folder === "prescriptions" ? "authenticated" : "upload",
+          // Prescriptions contain encrypted PHI -> authenticated raw delivery only
+          type: isRx ? "authenticated" : "upload",
         },
         (err, r) => (err || !r ? reject(err ?? new Error("Cloudinary upload failed")) : resolve(r as { secure_url: string })),
       );
-      stream.end(validated.buffer);
+      stream.end(payloadToStore);
     });
 
-    const url =
-      folder === "prescriptions"
-        ? createPrescriptionClaimUrl(fileName, opts.actorUserId ?? null)
-        : res.secure_url;
+    const url = isRx
+      ? createPrescriptionClaimUrl(fileName, opts.actorUserId ?? null)
+      : res.secure_url;
     return { url, fileName, ext: validated.ext, mime: validated.mime, size: validated.size };
   }
 
@@ -914,7 +921,7 @@ export async function storeUpload(
   const dir = folder === "prescriptions" ? privatePrescriptionDir() : publicUploadDir(folder);
   await ensureSafeDirectory(dir);
   const targetPath = resolveConfinedPath(dir, fileName);
-  await writeFile(targetPath, validated.buffer, { mode: 0o600, flag: "wx" });
+  await writeFile(targetPath, payloadToStore, { mode: 0o600, flag: "wx" });
 
   const url =
     folder === "prescriptions"
@@ -924,7 +931,21 @@ export async function storeUpload(
   return { url, fileName, ext: validated.ext, mime: validated.mime, size: validated.size };
 }
 
-/** Read and re-verify a private prescription file from storage (or authenticated Cloudinary). */
+function decryptStoredPrescriptionBytes(raw: Buffer, fileName: string): Buffer {
+  if (isEncryptedBuffer(raw)) {
+    try {
+      return decryptBuffer(raw, "file-rx", `prescription:${fileName}`);
+    } catch {
+      throw unsupportedMedia("Stored prescription failed cryptographic integrity verification");
+    }
+  }
+  if (isStrictEncryptionMode()) {
+    throw unsupportedMedia("Unencrypted prescription file rejected");
+  }
+  return raw;
+}
+
+/** Read, decrypt, and re-verify a private prescription file from storage (or authenticated Cloudinary). */
 export async function readStoredPrescription(fileName: string): Promise<{ buffer: Buffer; mime: AllowedMime; ext: AllowedExt }> {
   if (!SAFE_STORED_RX_NAME_RE.test(fileName) || path.basename(fileName) !== fileName) {
     throw notFound();
@@ -932,20 +953,31 @@ export async function readStoredPrescription(fileName: string): Promise<{ buffer
   const expectedExt = fileName.split(".").pop() as AllowedExt;
 
   if (serverEnv.cloudinary.configured) {
-    const publicId = `pamarcy/prescriptions/${fileName.replace(/\.[^.]+$/, "")}`;
+    const baseId = fileName.replace(/\.[^.]+$/, "");
     configureCloudinary();
-    const signedUrl = cloudinary.url(publicId, {
+    const encryptedUrl = cloudinary.url(`pamarcy/prescriptions/${baseId}.enc`, {
       type: "authenticated",
-      resource_type: expectedExt === "pdf" ? "raw" : "image",
-      format: expectedExt === "pdf" ? "pdf" : expectedExt,
+      resource_type: "raw",
       sign_url: true,
       secure: true,
       expires_at: Math.floor(Date.now() / 1000) + 60,
     });
-    const upstream = await fetch(signedUrl, { cache: "no-store" });
+    let upstream = await fetch(encryptedUrl, { cache: "no-store" });
+    if (!upstream.ok && !isStrictEncryptionMode()) {
+      const legacyUrl = cloudinary.url(`pamarcy/prescriptions/${baseId}`, {
+        type: "authenticated",
+        resource_type: expectedExt === "pdf" ? "raw" : "image",
+        format: expectedExt === "pdf" ? "pdf" : expectedExt,
+        sign_url: true,
+        secure: true,
+        expires_at: Math.floor(Date.now() / 1000) + 60,
+      });
+      upstream = await fetch(legacyUrl, { cache: "no-store" });
+    }
     if (!upstream.ok) throw notFound();
-    const buf = Buffer.from(await upstream.arrayBuffer());
-    const verified = inspectFileBuffer(buf, true);
+    const rawBuf = Buffer.from(await upstream.arrayBuffer());
+    const plainBuf = decryptStoredPrescriptionBytes(rawBuf, fileName);
+    const verified = inspectFileBuffer(plainBuf, true);
     if (verified.ext !== expectedExt) throw notFound();
     return { buffer: verified.buffer, mime: verified.mime, ext: verified.ext };
   }
@@ -958,11 +990,12 @@ export async function readStoredPrescription(fileName: string): Promise<{ buffer
   } catch {
     throw notFound();
   }
-  if (!st.isFile() || st.isSymbolicLink() || st.size < MIN_UPLOAD_BYTES || st.size > MAX_UPLOAD_BYTES) {
+  if (!st.isFile() || st.isSymbolicLink() || st.size < MIN_UPLOAD_BYTES || st.size > MAX_UPLOAD_BYTES + MAX_ENCRYPTED_FILE_OVERHEAD) {
     throw notFound();
   }
-  const buf = await readFile(filePath);
-  const verified = inspectFileBuffer(buf, true);
+  const rawBuf = await readFile(filePath);
+  const plainBuf = decryptStoredPrescriptionBytes(rawBuf, fileName);
+  const verified = inspectFileBuffer(plainBuf, true);
   if (verified.ext !== expectedExt) throw notFound();
   return { buffer: verified.buffer, mime: verified.mime, ext: verified.ext };
 }

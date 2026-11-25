@@ -34,11 +34,28 @@ export const POST = apiHandler(async (req) => {
   ]);
   if (!supplier) throw badRequest("Supplier not found");
   if (medsCount !== ids.length) throw badRequest("One or more medicines were not found");
-  const items = b.items.map((i) => ({ ...i, lineTotal: round2(i.quantity * i.unitCost) }));
+  // Explicit allowlisted item fields; lineTotal, subtotal, total, status, and createdById are strictly server-computed
+  const items = b.items.map((i) => ({
+    medicineId: i.medicineId,
+    quantity: i.quantity,
+    unitCost: i.unitCost,
+    lineTotal: round2(i.quantity * i.unitCost),
+  }));
   const subtotal = round2(items.reduce((s, i) => s + i.lineTotal, 0));
   const po = await prisma.$transaction(async (tx) => {
     const number = await nextNumber(tx, "PO");
-    return tx.purchase.create({ data: { number, supplierId: b.supplierId, notes: b.notes, shippingCost: b.shippingCost, subtotal, total: round2(subtotal + b.shippingCost), createdById: user.id, items: { create: items } } });
+    return tx.purchase.create({
+      data: {
+        number,
+        supplierId: b.supplierId,
+        notes: b.notes,
+        shippingCost: b.shippingCost,
+        subtotal,
+        total: round2(subtotal + b.shippingCost),
+        createdById: user.id,
+        items: { create: items },
+      },
+    });
   });
   await audit(user.id, "purchase.create", "Purchase", po.id, { number: po.number, total: po.total.toString() });
   return po;

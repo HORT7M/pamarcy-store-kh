@@ -58,7 +58,7 @@ export const POST = apiHandler(
     if (!user || !ok) {
       recordLoginFailureSignal(ip, normalizedId);
       if (user?.role.isStaff) await audit(user.id, "auth.login_failed", "User", user.id, { ip });
-      await handleLoginFailure({ ip, normalizedId, scope, userId: user?.id });
+      await handleLoginFailure({ ip, normalizedId, scope: user?.role.isStaff ? "admin" : scope, userId: user?.id });
       const nextRequirement = assessBotRequirement({
         action: botAction,
         ip,

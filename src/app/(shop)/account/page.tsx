@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Package, Clock, Heart, MapPin } from "lucide-react";
 import { prisma } from "@/lib/db";
-import { requireCustomer } from "@/lib/auth/session";
+import { requireCustomerPage } from "@/lib/auth/guards";
 import { getT } from "@/lib/i18n/server";
 import { customerOrders } from "@/lib/account";
 import { OrderList } from "@/components/shop/order-list";
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
-  const user = await requireCustomer();
+  const user = await requireCustomerPage();
   const { t } = await getT();
   const [orders, total, pending, wish, addrs] = await Promise.all([
     customerOrders(user.customerId, 5),

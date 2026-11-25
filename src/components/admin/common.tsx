@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { cn } from "@/lib/utils";
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: React.ReactNode }) {
@@ -39,15 +40,18 @@ export function StatCard({ label, value, sub, icon: Icon, tone = "green" }: { la
 }
 
 export function Pagination({ page, pageSize, total, onChange }: { page: number; pageSize: number; total: number; onChange: (p: number) => void }) {
+  const { t } = useI18n();
   const pages = Math.max(1, Math.ceil(total / pageSize));
   if (pages <= 1) return null;
+  const from = Math.min((page - 1) * pageSize + 1, total);
+  const to = Math.min(page * pageSize, total);
   return (
     <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
-      <span>Showing {Math.min((page - 1) * pageSize + 1, total)}–{Math.min(page * pageSize, total)} of {total}</span>
+      <span>{t("common.showingRange", { from, to, total })}</span>
       <div className="flex items-center gap-2">
-        <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => onChange(page - 1)}>Prev</Button>
+        <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => onChange(page - 1)}>{t("common.prev")}</Button>
         <span>{page} / {pages}</span>
-        <Button size="sm" variant="outline" disabled={page >= pages} onClick={() => onChange(page + 1)}>Next</Button>
+        <Button size="sm" variant="outline" disabled={page >= pages} onClick={() => onChange(page + 1)}>{t("common.next")}</Button>
       </div>
     </div>
   );

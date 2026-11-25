@@ -18,7 +18,7 @@ type PoDetail = {
 };
 
 export function PurchaseDetailClient({ id, canWrite }: { id: string; canWrite: boolean }) {
-  const { money } = useI18n();
+  const { money, t, tError } = useI18n();
   const [po, setPo] = useState<PoDetail | null>(null);
   const [rows, setRows] = useState<Record<string, { quantity: string; batchNumber: string; lotNumber: string; expiryDate: string }>>({});
   const [busy, setBusy] = useState(false);
@@ -44,34 +44,34 @@ export function PurchaseDetailClient({ id, canWrite }: { id: string; canWrite: b
         .map((i) => ({ purchaseItemId: i.id, quantity: Number(rows[i.id]?.quantity || 0), batchNumber: rows[i.id]?.batchNumber ?? "", lotNumber: rows[i.id]?.lotNumber || null, expiryDate: rows[i.id]?.expiryDate || null }))
         .filter((x) => x.quantity > 0);
       await api(`/api/admin/purchases/${id}/receive`, { method: "POST", body: { items } });
-      toast.success("Received stock into inventory batches");
+      toast.success(t("purchasesAdmin.receivedToast"));
       load();
-    } catch (err) { toast.error((err as Error).message); }
+    } catch (err) { toast.error(tError((err as Error).message)); }
     finally { setBusy(false); }
   }
 
   async function cancelPo() {
-    if (!confirm("Cancel this purchase order?")) return;
+    if (!confirm(t("purchasesAdmin.confirmCancelPo"))) return;
     setBusy(true);
-    try { await api(`/api/admin/purchases/${id}`, { method: "DELETE" }); toast.success("Purchase order cancelled"); load(); }
-    catch (err) { toast.error((err as Error).message); }
+    try { await api(`/api/admin/purchases/${id}`, { method: "DELETE" }); toast.success(t("purchasesAdmin.poCancelledToast")); load(); }
+    catch (err) { toast.error(tError((err as Error).message)); }
     finally { setBusy(false); }
   }
 
   return (
     <form onSubmit={receive} className="space-y-5">
-      <Link href="/admin/purchases" className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"><ArrowLeft className="size-4" /> Back to purchases</Link>
+      <Link href="/admin/purchases" className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"><ArrowLeft className="size-4" /> {t("purchasesAdmin.backToPurchases")}</Link>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-mono text-2xl font-bold">{po.number}</h1>
           <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{po.supplier.name}</span> · <span>Ordered {formatDate(po.orderedAt)}</span>
+            <span>{po.supplier.name}</span> · <span>{t("purchasesAdmin.orderedPrefix", { date: formatDate(po.orderedAt) })}</span>
             <StatusBadge status={po.status} />
           </div>
         </div>
         <div className="flex gap-2">
-          {canWrite && po.status === "ORDERED" && <Button type="button" variant="destructive" size="sm" onClick={cancelPo} disabled={busy}><XCircle /> Cancel PO</Button>}
-          {canReceive && <Button type="submit" disabled={busy}>{busy ? <Loader2 className="animate-spin" /> : <PackageCheck />} Record Received Stock</Button>}
+          {canWrite && po.status === "ORDERED" && <Button type="button" variant="destructive" size="sm" onClick={cancelPo} disabled={busy}><XCircle /> {t("purchasesAdmin.cancelPo")}</Button>}
+          {canReceive && <Button type="submit" disabled={busy}>{busy ? <Loader2 className="animate-spin" /> : <PackageCheck />} {t("purchasesAdmin.recordReceived")}</Button>}
         </div>
       </div>
 
@@ -79,8 +79,12 @@ export function PurchaseDetailClient({ id, canWrite }: { id: string; canWrite: b
         <table className="w-full text-sm">
           <thead className="border-b text-left text-xs text-muted-foreground">
             <tr>
-              <th className="py-2">Medicine</th><th className="py-2 text-right">Ordered</th><th className="py-2 text-right">Received</th><th className="py-2 text-right">Unit Cost</th><th className="py-2 text-right">Line Total</th>
-              {canReceive && <><th className="py-2 pl-3">Receive Qty</th><th className="py-2">Batch # *</th><th className="py-2">Expiry Date</th></>}
+              <th className="py-2">{t("inventoryAdmin.colMedicine")}</th>
+              <th className="py-2 text-right">{t("purchasesAdmin.colOrdered")}</th>
+              <th className="py-2 text-right">{t("purchasesAdmin.colReceived")}</th>
+              <th className="py-2 text-right">{t("purchasesAdmin.colUnitCost")}</th>
+              <th className="py-2 text-right">{t("purchasesAdmin.colLineTotal")}</th>
+              {canReceive && <><th className="py-2 pl-3">{t("purchasesAdmin.colReceiveQty")}</th><th className="py-2">{t("purchasesAdmin.colBatchNo")} *</th><th className="py-2">{t("purchasesAdmin.colExpiryDate")}</th></>}
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -92,7 +96,7 @@ export function PurchaseDetailClient({ id, canWrite }: { id: string; canWrite: b
                   <td className="py-2.5">
                     <div className="font-medium">{i.medicine.nameEn}</div>
                     <div className="font-mono text-xs text-muted-foreground">{i.medicine.sku}</div>
-                    {i.batches.length > 0 && <div className="mt-1 flex flex-wrap gap-1">{i.batches.map((b) => <span key={b.id} className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-primary">{b.batchNumber} ({b.quantity}, exp {formatDate(b.expiryDate)})</span>)}</div>}
+                    {i.batches.length > 0 && <div className="mt-1 flex flex-wrap gap-1">{i.batches.map((b) => <span key={b.id} className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-primary">{b.batchNumber} ({b.quantity}, {t("ordersAdmin.expShort")} {formatDate(b.expiryDate)})</span>)}</div>}
                   </td>
                   <td className="py-2.5 text-right">{i.quantity}</td>
                   <td className="py-2.5 text-right font-semibold">{i.receivedQuantity}</td>
@@ -111,9 +115,9 @@ export function PurchaseDetailClient({ id, canWrite }: { id: string; canWrite: b
           </tbody>
         </table>
         <div className="ml-auto mt-4 w-64 space-y-1 border-t pt-3 text-sm">
-          <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{money(po.subtotal)}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span>{money(po.shippingCost)}</span></div>
-          <div className="flex justify-between font-bold"><span>Total Purchasing Cost</span><span className="text-primary">{money(po.total)}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("cart.subtotal")}</span><span>{money(po.subtotal)}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("purchasesAdmin.shippingShort")}</span><span>{money(po.shippingCost)}</span></div>
+          <div className="flex justify-between font-bold"><span>{t("purchasesAdmin.totalPurchasingCost")}</span><span className="text-primary">{money(po.total)}</span></div>
         </div>
       </div>
     </form>

@@ -1,6 +1,6 @@
 import { Heart } from "lucide-react";
 import { prisma } from "@/lib/db";
-import { requireCustomer } from "@/lib/auth/session";
+import { requireCustomerPage } from "@/lib/auth/guards";
 import { getT } from "@/lib/i18n/server";
 import { toCards, productCardInclude } from "@/lib/catalog";
 import { ProductCard } from "@/components/shop/product-card";
@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/common/empty-state";
 export const dynamic = "force-dynamic";
 
 export default async function WishlistPage() {
-  const user = await requireCustomer();
+  const user = await requireCustomerPage();
   const { t } = await getT();
   const items = await prisma.wishlistItem.findMany({ where: { customerId: user.customerId, medicine: { deletedAt: null, isActive: true } }, include: { medicine: { include: productCardInclude } }, orderBy: { createdAt: "desc" } });
   const cards = await toCards(items.map((i) => i.medicine));

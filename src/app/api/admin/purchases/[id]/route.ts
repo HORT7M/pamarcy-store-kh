@@ -17,10 +17,15 @@ export const GET = apiHandler<{ id: string }>(async (_req, { params }) => {
 export const DELETE = apiHandler<{ id: string }>(async (_req, { params }) => {
   const user = await requireStaff("purchases.write");
   const { id } = await parseParams(params, idParamSchema);
-  const p = await prisma.purchase.findUnique({ where: { id } });
-  if (!p) throw notFound();
-  if (p.status !== "ORDERED" && p.status !== "DRAFT") throw conflict("Only purchase orders with no received stock can be cancelled");
-  await prisma.purchase.update({ where: { id }, data: { status: "CANCELLED" } });
+  await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Purchase" WHERE id = ${id} FOR UPDATE`;
+    const p = await tx.purchase.findUnique({ where: { id }, select: { id: true, status: true } });
+    if (!p) throw notFound();
+    if (p.status !== "ORDERED" && p.status !== "DRAFT") {
+      throw conflict("Only purchase orders with no received stock can be cancelled");
+    }
+    await tx.purchase.update({ where: { id }, data: { status: "CANCELLED" } });
+  });
   await audit(user.id, "purchase.cancel", "Purchase", id);
   return { ok: true };
 });

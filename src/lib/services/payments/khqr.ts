@@ -46,13 +46,18 @@ export async function checkBakongTransaction(md5: string): Promise<BakongCheckRe
   const token = serverEnv.bakong.apiToken;
   if (!token) throw new ApiError(503, "KHQR_NOT_CONFIGURED", "KHQR payment verification is not configured");
   const base = serverEnv.bakong.apiBase;
-  const res = await fetch(`${base}/v1/check_transaction_by_md5`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ md5 }),
-    cache: "no-store",
-    signal: AbortSignal.timeout(15000),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${base}/v1/check_transaction_by_md5`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ md5 }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch {
+    throw new ApiError(502, "KHQR_UPSTREAM", "Bakong API request failed");
+  }
   if (res.status === 401 || res.status === 403) throw new ApiError(502, "KHQR_AUTH", "Bakong API token rejected (expired or invalid)");
   if (!res.ok) throw new ApiError(502, "KHQR_UPSTREAM", `Bakong API error ${res.status}`);
   const body = (await res.json()) as {

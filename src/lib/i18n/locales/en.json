@@ -288,7 +288,32 @@
     "pharmacyAdmin": "Pharmacy Administration",
     "authorizedStaffOnly": "Authorized pharmacy staff only",
     "backToStorefront": "Back to storefront",
-    "togglePassword": "Show or hide password"
+    "togglePassword": "Show or hide password",
+    "forgotPassword": "Forgot password?",
+    "forgotTitle": "Reset your password",
+    "forgotSubtitle": "Enter your email or phone number and we will send reset instructions if an account exists.",
+    "sendResetLink": "Send reset instructions",
+    "resetSent": "If an account matches that email or phone number, password reset instructions have been sent.",
+    "resetTitle": "Set a new password",
+    "resetSubmit": "Update password",
+    "resetSuccess": "Your password has been reset. You can now sign in.",
+    "invalidResetLink": "This reset link is missing or invalid. Please request a new password reset.",
+    "backToLogin": "Back to sign in",
+    "cooldownWait": "Too many attempts. Please wait {time} before trying again."
+  },
+  "security": {
+    "title": "Human verification",
+    "verifying": "Verifying browser…",
+    "verified": "Protected against automated abuse",
+    "solvePrompt": "Please enter the answer to continue",
+    "answerPlaceholder": "Enter answer",
+    "captchaAlt": "Math verification puzzle",
+    "refresh": "New puzzle",
+    "accessible": "Text question",
+    "visual": "Image puzzle",
+    "listen": "Read aloud",
+    "required": "Please complete the verification check first",
+    "fallbackNotice": "Switched to built-in verification"
   },
   "status": {
     "PENDING": "Pending",

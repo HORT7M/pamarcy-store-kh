@@ -183,10 +183,10 @@ export function buildPageCsp({
     connectSrc.push("https://challenges.cloudflare.com");
     frameSrc.push("https://challenges.cloudflare.com");
   } else if (botProvider === "hcaptcha") {
-    scriptSrc.push("https://js.hcaptcha.com", "https://*.hcaptcha.com");
-    styleSrc.push("https://*.hcaptcha.com");
-    connectSrc.push("https://api.hcaptcha.com", "https://*.hcaptcha.com");
-    frameSrc.push("https://newassets.hcaptcha.com", "https://*.hcaptcha.com");
+    scriptSrc.push("https://hcaptcha.com", "https://js.hcaptcha.com", "https://*.hcaptcha.com");
+    styleSrc.push("https://hcaptcha.com", "https://*.hcaptcha.com");
+    connectSrc.push("https://hcaptcha.com", "https://api.hcaptcha.com", "https://*.hcaptcha.com");
+    frameSrc.push("https://hcaptcha.com", "https://newassets.hcaptcha.com", "https://*.hcaptcha.com");
   }
 
   const directives = [
@@ -213,15 +213,40 @@ export function buildPageCsp({
   return directives.join("; ");
 }
 
+/** Detect whether the ACTUAL incoming HTTP request arrived over HTTPS (ignoring APP_URL fallback). */
+export function isIncomingRequestHttps(req: {
+  headers: { get(name: string): string | null };
+  nextUrl: { protocol: string };
+}): boolean {
+  const xfp = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+  if (xfp) return xfp === "https";
+  const forwarded = req.headers.get("forwarded");
+  if (forwarded) {
+    const m = /(?:^|[;,\s])proto="?([a-z]+)"?(?:$|[;,\s])/i.exec(forwarded);
+    if (m) return m[1]!.toLowerCase() === "https";
+  }
+  return req.nextUrl.protocol === "https:";
+}
+
+/** Detect whether the incoming request targets localhost / loopback (dev & local tests). */
+export function isLoopbackRequestHost(req: {
+  headers: { get(name: string): string | null };
+  nextUrl: { hostname?: string };
+}): boolean {
+  const rawHost = (req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? req.nextUrl.hostname ?? "")
+    .split(",")[0]
+    ?.trim()
+    .toLowerCase() ?? "";
+  const hostname = rawHost.replace(/^\[([^\]]+)\](?::\d+)?$/, "$1").replace(/:\d+$/, "");
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
 /** Detect whether the incoming request or configured deployment URL uses HTTPS. */
 export function isHttpsRequest(req: {
   headers: { get(name: string): string | null };
   nextUrl: { protocol: string };
 }): boolean {
-  if (req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase() === "https") {
-    return true;
-  }
-  if (req.nextUrl.protocol === "https:") {
+  if (isIncomingRequestHttps(req)) {
     return true;
   }
   if ((process.env.APP_URL ?? "").trim().toLowerCase().startsWith("https://")) {

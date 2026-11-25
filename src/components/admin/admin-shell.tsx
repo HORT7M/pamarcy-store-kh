@@ -12,40 +12,43 @@ import { Logo } from "@/components/common/logo";
 import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { NotificationBell } from "@/components/common/notification-bell";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { localizeRoleName, type TKey } from "@/lib/i18n/translate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/fetcher";
 import type { Permission, RoleKey } from "@/lib/auth/permissions";
 import { cn } from "@/lib/utils";
 
-type NavItem = { href: string; labelEn: string; labelKm: string; icon: React.ComponentType<{ className?: string }>; perm?: Permission; group: string };
+type GroupKey = "main" | "sales" | "catalog" | "stock" | "ops" | "sys";
+type NavItem = { href: string; labelKey: TKey; icon: React.ComponentType<{ className?: string }>; perm?: Permission; group: GroupKey };
 
 const NAV: NavItem[] = [
-  { href: "/admin", labelEn: "Dashboard", labelKm: "ផ្ទាំងសង្ខេប", icon: LayoutDashboard, perm: "dashboard.view", group: "main" },
-  { href: "/admin/pos", labelEn: "Point of Sale (POS)", labelKm: "ប្រព័ន្ធលក់ POS", icon: MonitorSmartphone, perm: "pos.use", group: "main" },
-  { href: "/admin/orders", labelEn: "Orders", labelKm: "ការបញ្ជាទិញ", icon: ShoppingBag, perm: "orders.read", group: "sales" },
-  { href: "/admin/payments", labelEn: "Payments", labelKm: "ការទូទាត់", icon: CreditCard, perm: "payments.read", group: "sales" },
-  { href: "/admin/customers", labelEn: "Customers", labelKm: "អតិថិជន", icon: Users, perm: "customers.read", group: "sales" },
-  { href: "/admin/medicines", labelEn: "Medicines", labelKm: "ឱសថ និងផលិតផល", icon: Pill, perm: "medicines.read", group: "catalog" },
-  { href: "/admin/categories", labelEn: "Categories & Brands", labelKm: "ប្រភេទ និងម៉ាក", icon: FolderTree, perm: "categories.write", group: "catalog" },
-  { href: "/admin/inventory", labelEn: "Inventory", labelKm: "ស្តុកទំនិញ", icon: Boxes, perm: "inventory.read", group: "stock" },
-  { href: "/admin/inventory/expiry", labelEn: "Expiration Watch", labelKm: "ការផុតកំណត់", icon: CalendarClock, perm: "inventory.read", group: "stock" },
-  { href: "/admin/purchases", labelEn: "Purchases", labelKm: "ការបញ្ជាទិញចូល", icon: ClipboardList, perm: "purchases.read", group: "stock" },
-  { href: "/admin/suppliers", labelEn: "Suppliers", labelKm: "អ្នកផ្គត់ផ្គង់", icon: Truck, perm: "suppliers.read", group: "stock" },
-  { href: "/admin/marketing", labelEn: "Discounts & Banners", labelKm: "ការបញ្ចុះតម្លៃ", icon: Tag, perm: "discounts.write", group: "ops" },
-  { href: "/admin/reports", labelEn: "Reports", labelKm: "របាយការណ៍", icon: BarChart3, perm: "reports.view", group: "ops" },
-  { href: "/admin/staff", labelEn: "Staff & Roles", labelKm: "បុគ្គលិក និងតួនាទី", icon: Shield, perm: "users.manage", group: "sys" },
-  { href: "/admin/settings", labelEn: "Settings", labelKm: "ការកំណត់", icon: Settings, perm: "settings.manage", group: "sys" },
-  { href: "/admin/audit", labelEn: "Audit Logs", labelKm: "កំណត់ហេតុសកម្មភាព", icon: FileClock, perm: "audit.view", group: "sys" },
+  { href: "/admin", labelKey: "adminNav.links.dashboard", icon: LayoutDashboard, perm: "dashboard.view", group: "main" },
+  { href: "/admin/pos", labelKey: "adminNav.links.pos", icon: MonitorSmartphone, perm: "pos.use", group: "main" },
+  { href: "/admin/orders", labelKey: "adminNav.links.orders", icon: ShoppingBag, perm: "orders.read", group: "sales" },
+  { href: "/admin/payments", labelKey: "adminNav.links.payments", icon: CreditCard, perm: "payments.read", group: "sales" },
+  { href: "/admin/customers", labelKey: "adminNav.links.customers", icon: Users, perm: "customers.read", group: "sales" },
+  { href: "/admin/medicines", labelKey: "adminNav.links.medicines", icon: Pill, perm: "medicines.read", group: "catalog" },
+  { href: "/admin/categories", labelKey: "adminNav.links.categories", icon: FolderTree, perm: "categories.write", group: "catalog" },
+  { href: "/admin/inventory", labelKey: "adminNav.links.inventory", icon: Boxes, perm: "inventory.read", group: "stock" },
+  { href: "/admin/inventory/expiry", labelKey: "adminNav.links.expiry", icon: CalendarClock, perm: "inventory.read", group: "stock" },
+  { href: "/admin/purchases", labelKey: "adminNav.links.purchases", icon: ClipboardList, perm: "purchases.read", group: "stock" },
+  { href: "/admin/suppliers", labelKey: "adminNav.links.suppliers", icon: Truck, perm: "suppliers.read", group: "stock" },
+  { href: "/admin/marketing", labelKey: "adminNav.links.marketing", icon: Tag, perm: "discounts.write", group: "ops" },
+  { href: "/admin/reports", labelKey: "adminNav.links.reports", icon: BarChart3, perm: "reports.view", group: "ops" },
+  { href: "/admin/staff", labelKey: "adminNav.links.staff", icon: Shield, perm: "users.manage", group: "sys" },
+  { href: "/admin/settings", labelKey: "adminNav.links.settings", icon: Settings, perm: "settings.manage", group: "sys" },
+  { href: "/admin/audit", labelKey: "adminNav.links.audit", icon: FileClock, perm: "audit.view", group: "sys" },
 ];
 
-const GROUPS: Record<string, { en: string; km: string }> = {
-  main: { en: "Overview", km: "ទូទៅ" },
-  sales: { en: "Sales & Orders", km: "ការលក់ និងការបញ្ជាទិញ" },
-  catalog: { en: "Catalogue", km: "បញ្ជីឱសថ" },
-  stock: { en: "Inventory & Supply", km: "ស្តុក និងការផ្គត់ផ្គង់" },
-  ops: { en: "Growth & Analytics", km: "ទីផ្សារ និងរបាយការណ៍" },
-  sys: { en: "Administration", km: "ការគ្រប់គ្រងប្រព័ន្ធ" },
+const GROUP_ORDER: GroupKey[] = ["main", "sales", "catalog", "stock", "ops", "sys"];
+const GROUP_KEYS: Record<GroupKey, TKey> = {
+  main: "adminNav.groups.main",
+  sales: "adminNav.groups.sales",
+  catalog: "adminNav.groups.catalog",
+  stock: "adminNav.groups.stock",
+  ops: "adminNav.groups.ops",
+  sys: "adminNav.groups.sys",
 };
 
 export type AdminUser = { id: string; name: string; email: string; role: RoleKey; permissions: Permission[] };
@@ -53,11 +56,12 @@ export type AdminUser = { id: string; name: string; email: string; role: RoleKey
 export function AdminShell({ user, children }: { user: AdminUser; children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
-  const { locale, t } = useI18n();
+  const { t, tryT } = useI18n();
   const [open, setOpen] = useState(false);
 
   const visible = NAV.filter((n) => !n.perm || user.permissions.includes(n.perm) || (n.href === "/admin/settings" && user.permissions.includes("settings.payments")));
-  const groups = Object.keys(GROUPS).filter((g) => visible.some((n) => n.group === g));
+  const groups = GROUP_ORDER.filter((g) => visible.some((n) => n.group === g));
+  const roleLabel = localizeRoleName(user.role, user.role.replace(/_/g, " "), tryT);
 
   async function logout() {
     try {
@@ -71,14 +75,14 @@ export function AdminShell({ user, children }: { user: AdminUser; children: Reac
   const sidebarContent = (
     <div className="flex h-full flex-col bg-[#0b2a1b] text-white">
       <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
-        <Logo href="/admin" light subtitle={locale === "km" ? "ផ្ទាំងគ្រប់គ្រង" : "Admin Console"} />
-        <button className="lg:hidden text-white/80 hover:text-white" onClick={() => setOpen(false)} aria-label="Close"><X className="size-5" /></button>
+        <Logo href="/admin" light subtitle={t("adminNav.consoleSubtitle")} />
+        <button className="lg:hidden text-white/80 hover:text-white" onClick={() => setOpen(false)} aria-label={t("common.close")}><X className="size-5" /></button>
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
         {groups.map((g) => (
           <div key={g}>
             <div className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-emerald-300/60">
-              {locale === "km" ? GROUPS[g].km : GROUPS[g].en}
+              {t(GROUP_KEYS[g])}
             </div>
             <div className="space-y-0.5">
               {visible.filter((n) => n.group === g).map((n) => {
@@ -98,7 +102,7 @@ export function AdminShell({ user, children }: { user: AdminUser; children: Reac
                     )}
                   >
                     <n.icon className="size-4 shrink-0" />
-                    <span className="truncate">{locale === "km" ? n.labelKm : n.labelEn}</span>
+                    <span className="truncate">{t(n.labelKey)}</span>
                     {active && <ChevronRight className="ml-auto size-3.5 opacity-80" />}
                   </Link>
                 );
@@ -109,12 +113,12 @@ export function AdminShell({ user, children }: { user: AdminUser; children: Reac
       </div>
       <div className="border-t border-white/10 p-3 space-y-2">
         <Link href="/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/75 hover:bg-white/10 hover:text-white">
-          <Store className="size-4" /> {locale === "km" ? "បើកគេហទំព័រហាង" : "Open Storefront"}
+          <Store className="size-4" /> {t("adminNav.openStorefront")}
         </Link>
         <div className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
           <div className="min-w-0">
             <div className="truncate text-xs font-semibold">{user.name}</div>
-            <div className="truncate text-[10px] text-emerald-300/80">{user.role.replace(/_/g, " ")}</div>
+            <div className="truncate text-[10px] text-emerald-300/80">{roleLabel}</div>
           </div>
           <button onClick={logout} title={t("common.logout")} className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white">
             <LogOut className="size-4" />
@@ -135,9 +139,9 @@ export function AdminShell({ user, children }: { user: AdminUser; children: Reac
       )}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-white/95 px-4 backdrop-blur lg:px-6">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(true)} aria-label="Menu"><Menu className="size-5" /></Button>
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(true)} aria-label={t("common.menu")}><Menu className="size-5" /></Button>
           <div className="hidden items-center gap-2 sm:flex">
-            <Badge variant="secondary" className="font-mono text-[11px]">{user.role.replace(/_/g, " ")}</Badge>
+            <Badge variant="secondary" className="text-[11px]">{roleLabel}</Badge>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <LocaleSwitcher compact />

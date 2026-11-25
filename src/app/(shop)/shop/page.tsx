@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PackageSearch } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getT } from "@/lib/i18n/server";
+import { localizeCategoryName } from "@/lib/i18n/translate";
 import { searchProducts } from "@/lib/catalog";
 import { ProductCard } from "@/components/shop/product-card";
 import { EmptyState } from "@/components/common/empty-state";
@@ -37,7 +38,7 @@ function safePage(raw?: string): number {
 
 export default async function ShopPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
-  const { t, locale } = await getT();
+  const { t, tryT, locale } = await getT();
   const rawQ = firstStr(sp.q);
   const safeQ = rawQ ? normalizeSingleLineText(rawQ, 100) : "";
   const rawCat = firstStr(sp.category)?.trim();
@@ -81,7 +82,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
     prisma.brand.findMany({ where: { deletedAt: null, medicines: { some: { deletedAt: null, isActive: true } } }, orderBy: { name: "asc" }, select: { slug: true, name: true } }),
   ]);
   const cat = categories.find((c) => c.slug === category);
-  const title = safeQ ? `“${safeQ}”` : cat ? (locale === "km" ? cat.nameKm : cat.nameEn) : offers ? t("nav.offers") : t("shop.title");
+  const title = safeQ ? `“${safeQ}”` : cat ? localizeCategoryName(cat, locale, tryT) : offers ? t("nav.offers") : t("shop.title");
 
   const qs = (p: number) => {
     const u = new URLSearchParams();

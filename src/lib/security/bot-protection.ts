@@ -418,7 +418,7 @@ export function issueBotChallenge(
     action: BotAction;
     requestedMode?: "auto" | "interactive" | "accessible";
     fallbackBuiltin?: boolean;
-    locale?: "km" | "en";
+    locale?: "km" | "en" | "vi" | "zh-CN" | "fr";
     identifier?: string | null;
     authenticated?: boolean;
     recentUnpaidOrders?: number;
@@ -494,7 +494,7 @@ export function issueBotChallenge(
     imageDataUri = visual.imageDataUri;
     ansHash = hashAnswer(id, visual.answer);
   } else if (mode === "accessible") {
-    const acc = generateAccessibleCaptcha(opts.locale === "en" ? "en" : "km");
+    const acc = generateAccessibleCaptcha(opts.locale ?? "km");
     prompt = acc.prompt;
     ansHash = hashAnswer(id, acc.answer);
   }

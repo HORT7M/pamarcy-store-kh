@@ -3,7 +3,8 @@ import { randomBytes } from "node:crypto";
 import { Prisma, type Payment, type PaymentMethodCode } from "@prisma/client";
 import QRCode from "qrcode";
 import { prisma, type Tx } from "@/lib/db";
-import { ApiError, badRequest, conflict, notFound } from "@/lib/errors";
+import { ApiError, badRequest, conflict, forbidden, notFound } from "@/lib/errors";
+import { orderAccessToken } from "@/lib/order-access";
 import { round2, toNum, usdToKhr } from "@/lib/money";
 import { getSettings } from "@/lib/settings";
 import { audit } from "@/lib/audit";
@@ -44,6 +45,9 @@ export type InitiateOptions = { method: PaymentMethodCode; currency?: "USD" | "K
 export async function initiatePayment(orderId: string, opts: InitiateOptions, actorUserId: string | null) {
   const order = await prisma.order.findUnique({ where: { id: orderId }, include: { payments: true } });
   if (!order) throw notFound("Order not found");
+  if ((opts.channel === "pos" && order.channel !== "POS") || (opts.channel === "online" && order.channel !== "ONLINE")) {
+    throw conflict("Order channel does not match payment channel");
+  }
   if (order.status === "CANCELLED") throw conflict("Order has been cancelled");
   if (order.paymentStatus === "PAID") throw conflict("Order is already paid");
   if (order.prescriptionStatus === "PENDING_REVIEW") throw conflict("Waiting for pharmacist to review your prescription before payment");
@@ -117,11 +121,12 @@ export async function initiatePayment(orderId: string, opts: InitiateOptions, ac
   if (opts.method === "PAYPAL") {
     const appUrl = serverEnv.appUrl;
     const back = opts.channel === "pos" ? `${appUrl}/admin/pos` : `${appUrl}/checkout/pay/${order.id}`;
+    const guestQs = opts.channel === "online" && !order.customerId ? `&token=${encodeURIComponent(orderAccessToken(order.id))}` : "";
     const p = await prisma.payment.create({
       data: { reference, orderId, methodId: method.id, amountUsd: total, currency: "USD", amount: total, expiresAt: new Date(Date.now() + 3 * 3600_000) },
     });
     try {
-      const pp = await createPaypalOrder({ reference, orderNumber: order.number, amountUsd: total.toFixed(2), brandName: settings.storeNameEn, returnUrl: `${back}?paypal=return`, cancelUrl: `${back}?paypal=cancel` });
+      const pp = await createPaypalOrder({ reference, orderNumber: order.number, amountUsd: total.toFixed(2), brandName: settings.storeNameEn, returnUrl: `${back}?paypal=return${guestQs}`, cancelUrl: `${back}?paypal=cancel${guestQs}` });
       const approve = approvalUrl(pp);
       const updated = await prisma.payment.update({ where: { id: p.id }, data: { providerRef: pp.id, qrString: approve } });
       await logTx(prisma, p.id, { type: "CREATE", status: "ok", externalId: pp.id, message: `PayPal order ${pp.id} created`, raw: pp });
@@ -147,11 +152,15 @@ export async function initiatePayment(orderId: string, opts: InitiateOptions, ac
  * The ONLY place a payment becomes PAID. Must be called with provider-verified data.
  * Locks the payment row, is idempotent, and confirms the order (stock deduction) atomically.
  */
-async function settlePaid(paymentId: string, d: { providerTxnId: string; payerInfo?: string; message: string; raw?: unknown; usedHash?: { network: string; txHash: string } }, actorUserId: string | null) {
+async function settlePaid(paymentId: string, d: { providerTxnId: string; payerInfo?: string; message: string; raw?: unknown; usedHash?: { network: string; txHash: string }; requirePending?: boolean }, actorUserId: string | null) {
   const result = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Payment" WHERE id = ${paymentId} FOR UPDATE`;
     const p = await tx.payment.findUniqueOrThrow({ where: { id: paymentId }, include: { order: true } });
     if (p.status === "PAID") return { payment: p, changed: false, orderCancelled: false };
+    if (p.status === "REFUNDED") throw conflict("Payment has already been refunded");
+    if (d.requirePending && (p.status !== "PENDING" || p.order.status !== "PENDING")) {
+      throw conflict("Payment is no longer open for settlement");
+    }
     if (d.usedHash) {
       try {
         await tx.usedTransactionHash.create({ data: { network: d.usedHash.network, txHash: d.usedHash.txHash, paymentId } });
@@ -345,8 +354,14 @@ export async function capturePaypal(paymentId: string, actorUserId: string | nul
 export async function handlePaypalWebhook(event: { event_type: string; resource: Record<string, unknown> }) {
   const r = event.resource as { id?: string; custom_id?: string; status?: string; supplementary_data?: { related_ids?: { order_id?: string } } };
   const orderId = r.supplementary_data?.related_ids?.order_id ?? (event.event_type.startsWith("CHECKOUT.ORDER") ? r.id : undefined);
+  const clauses = [
+    r.custom_id ? { reference: r.custom_id } : undefined,
+    orderId ? { providerRef: orderId } : undefined,
+    r.id ? { providerTxnId: `PAYPAL:${r.id}` } : undefined,
+  ].filter(Boolean) as Prisma.PaymentWhereInput[];
+  if (!clauses.length) return { handled: false };
   const p = await prisma.payment.findFirst({
-    where: { OR: [r.custom_id ? { reference: r.custom_id } : undefined, orderId ? { providerRef: orderId } : undefined, r.id ? { providerTxnId: `PAYPAL:${r.id}` } : undefined].filter(Boolean) as Prisma.PaymentWhereInput[] },
+    where: { method: { code: "PAYPAL" }, OR: clauses },
   });
   if (!p) return { handled: false };
   await logTx(prisma, p.id, { type: "WEBHOOK", status: "ok", message: event.event_type, externalId: r.id, raw: event });
@@ -356,7 +371,7 @@ export async function handlePaypalWebhook(event: { event_type: string; resource:
       break;
     case "PAYMENT.CAPTURE.COMPLETED":
       // Re-fetch from PayPal instead of trusting the webhook body
-      if (p.status !== "PAID" && p.providerRef) {
+      if (p.status !== "PAID" && p.status !== "REFUNDED" && p.providerRef) {
         const o = await getPaypalOrder(p.providerRef);
         const cap = o.purchase_units?.[0]?.payments?.captures?.find((c) => c.id === r.id);
         if (o.status === "COMPLETED" && cap?.status === "COMPLETED" && cap.amount.value === toNum(p.amount).toFixed(2)) {
@@ -381,11 +396,21 @@ export async function handlePaypalWebhook(event: { event_type: string; resource:
 // ───────────────────────────── cash & refunds ─────────────────────────────
 
 /** POS cash: a staff member physically receiving cash is the verification. */
-export async function recordCashPayment(paymentId: string, tendered: number, actorUserId: string) {
-  const p = await prisma.payment.findUnique({ where: { id: paymentId }, include: { method: true } });
-  if (!p || p.method.code !== "CASH") throw notFound("Payment not found");
+export async function recordCashPayment(
+  paymentId: string,
+  tendered: number,
+  actorUserId: string,
+  opts: { allowAnyCashier?: boolean } = {},
+) {
+  const p = await prisma.payment.findUnique({ where: { id: paymentId }, include: { method: true, order: true } });
+  if (!p || p.method.code !== "CASH" || p.order.channel !== "POS") throw notFound("Payment not found");
+  if (!opts.allowAnyCashier && p.order.cashierId && p.order.cashierId !== actorUserId) {
+    throw forbidden("You can only complete cash payment for your own POS sale");
+  }
+  if (p.order.status !== "PENDING") throw conflict("Order is no longer open for cash payment");
+  if (p.status !== "PENDING") throw conflict(`Payment is already ${p.status.toLowerCase()}`);
   if (tendered + 0.001 < toNum(p.amount)) throw badRequest("Cash tendered is less than the amount due");
-  const paid = await settlePaid(p.id, { providerTxnId: `CASH:${p.reference}`, message: `Cash received $${tendered.toFixed(2)}, change $${round2(tendered - toNum(p.amount)).toFixed(2)}` }, actorUserId);
+  const paid = await settlePaid(p.id, { providerTxnId: `CASH:${p.reference}`, message: `Cash received ${tendered.toFixed(2)}, change ${round2(tendered - toNum(p.amount)).toFixed(2)}`, requirePending: true }, actorUserId);
   await audit(actorUserId, "payment.cash", "Payment", p.id, { tendered });
   return paid;
 }
@@ -406,9 +431,12 @@ export async function refundPayment(paymentId: string, actorUserId: string, reas
     externalId = opts.manualReference;
   }
   await prisma.$transaction(async (tx) => {
-    await tx.payment.update({ where: { id: p.id }, data: { status: "REFUNDED", refundedAt: new Date(), refundAmount: p.amountUsd } });
-    await tx.order.update({ where: { id: p.orderId }, data: { paymentStatus: "REFUNDED" } });
-    await logTx(tx, p.id, { type: "REFUND", status: "ok", message: reason, externalId, amount: toNum(p.amount) });
+    await tx.$queryRaw`SELECT id FROM "Payment" WHERE id = ${p.id} FOR UPDATE`;
+    const locked = await tx.payment.findUniqueOrThrow({ where: { id: p.id } });
+    if (locked.status !== "PAID") throw conflict("Payment has already been refunded or is no longer paid");
+    await tx.payment.update({ where: { id: p.id }, data: { status: "REFUNDED", refundedAt: new Date(), refundAmount: locked.amountUsd } });
+    await tx.order.update({ where: { id: locked.orderId }, data: { paymentStatus: "REFUNDED" } });
+    await logTx(tx, p.id, { type: "REFUND", status: "ok", message: reason, externalId, amount: toNum(locked.amount) });
   });
   await audit(actorUserId, "payment.refund", "Payment", p.id, { reason, externalId: externalId ?? null });
   return prisma.payment.findUniqueOrThrow({ where: { id: p.id } });

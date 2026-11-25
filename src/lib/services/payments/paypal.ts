@@ -21,13 +21,18 @@ async function accessToken(): Promise<string> {
   const id = serverEnv.paypal.clientId;
   const secret = serverEnv.paypal.clientSecret;
   if (!id || !secret) throw new ApiError(503, "PAYPAL_NOT_CONFIGURED", "PayPal is not configured");
-  const res = await fetch(`${base()}/v1/oauth2/token`, {
-    method: "POST",
-    headers: { Authorization: "Basic " + Buffer.from(`${id}:${secret}`).toString("base64"), "Content-Type": "application/x-www-form-urlencoded" },
-    body: "grant_type=client_credentials",
-    cache: "no-store",
-    signal: AbortSignal.timeout(15000),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${base()}/v1/oauth2/token`, {
+      method: "POST",
+      headers: { Authorization: "Basic " + Buffer.from(`${id}:${secret}`).toString("base64"), "Content-Type": "application/x-www-form-urlencoded" },
+      body: "grant_type=client_credentials",
+      cache: "no-store",
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch {
+    throw new ApiError(502, "PAYPAL_AUTH", "PayPal authentication request failed");
+  }
   if (!res.ok) throw new ApiError(502, "PAYPAL_AUTH", "PayPal authentication failed");
   const j = (await res.json()) as { access_token: string; expires_in: number };
   cached = { token: j.access_token, exp: Date.now() + j.expires_in * 1000 };
@@ -36,13 +41,18 @@ async function accessToken(): Promise<string> {
 
 async function call<T>(method: string, path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<{ status: number; data: T }> {
   const token = await accessToken();
-  const res = await fetch(base() + path, {
-    method,
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...extraHeaders },
-    body: body ? JSON.stringify(body) : undefined,
-    cache: "no-store",
-    signal: AbortSignal.timeout(20000),
-  });
+  let res: Response;
+  try {
+    res = await fetch(base() + path, {
+      method,
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...extraHeaders },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+      signal: AbortSignal.timeout(20000),
+    });
+  } catch {
+    throw new ApiError(502, "PAYPAL_UPSTREAM", "PayPal upstream request failed");
+  }
   const data = (await res.json().catch(() => ({}))) as T;
   return { status: res.status, data };
 }

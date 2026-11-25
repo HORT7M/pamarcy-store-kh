@@ -2,6 +2,7 @@ import { apiHandler, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { requireCustomer } from "@/lib/auth/session";
 import { addressSchema } from "@/lib/validators";
+import { ADDRESS_WRITE_FIELDS, pickAllowed } from "@/lib/allowlist";
 import { addressSelect } from "@/lib/public-select";
 import { badRequest } from "@/lib/errors";
 
@@ -15,13 +16,14 @@ export const GET = apiHandler(async () => {
 export const POST = apiHandler(async (req) => {
   const u = await requireCustomer();
   const body = await parseBody(req, addressSchema);
+  const allowed = pickAllowed(body, ADDRESS_WRITE_FIELDS);
   return prisma.$transaction(async (tx) => {
     const count = await tx.address.count({ where: { customerId: u.customerId } });
     if (count >= MAX_ADDRESSES_PER_CUSTOMER) {
       throw badRequest(`You can save at most ${MAX_ADDRESSES_PER_CUSTOMER} addresses`);
     }
-    const isDefault = body.isDefault || count === 0;
+    const isDefault = allowed.isDefault || count === 0;
     if (isDefault) await tx.address.updateMany({ where: { customerId: u.customerId }, data: { isDefault: false } });
-    return tx.address.create({ data: { ...body, isDefault, customerId: u.customerId }, select: addressSelect });
+    return tx.address.create({ data: { ...allowed, isDefault, customerId: u.customerId }, select: addressSelect });
   });
 });

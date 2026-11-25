@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, QrCode, Wallet, CreditCard, FileClock, CheckCircle2, XCircle, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -22,7 +22,7 @@ type OrderDto = {
 const ICONS = { KHQR: QrCode, USDT: Wallet, PAYPAL: CreditCard, CASH: CreditCard };
 
 export function PayClient({ order, token, methods, initialPayment, paypalReturn }: { order: OrderDto; token: string; methods: MethodDto[]; initialPayment: PaymentViewDto | null; paypalReturn: "return" | "cancel" | null }) {
-  const { t, pick, money, locale } = useI18n();
+  const { t, tError, pick, money, payMethodName } = useI18n();
   const router = useRouter();
   const [payment, setPayment] = useState<PaymentViewDto | null>(initialPayment);
   const [method, setMethod] = useState<MethodDto["code"] | null>(initialPayment?.method ?? null);
@@ -31,31 +31,32 @@ export function PayClient({ order, token, methods, initialPayment, paypalReturn 
   const [creating, setCreating] = useState(false);
   const [paid, setPaid] = useState(order.paymentStatus === "PAID");
   const captured = useRef(false);
-  const q = `?token=${encodeURIComponent(token)}`;
+  const q = token ? `?token=${encodeURIComponent(token)}` : "";
+  const tokenHeaders = useMemo(() => (token ? { "x-order-token": token } : undefined), [token]);
 
   // PayPal return: capture on the server (never trust the redirect alone)
   useEffect(() => {
     if (paypalReturn === "cancel") toast.info(t("pay.cancelled"));
     if (paypalReturn === "return" && payment?.method === "PAYPAL" && payment.status !== "PAID" && !captured.current) {
       captured.current = true;
-      api<PaymentViewDto>(`/api/payments/${payment.id}/paypal-capture${q}`, { method: "POST" })
+      api<PaymentViewDto>(`/api/payments/${payment.id}/paypal-capture`, { method: "POST", headers: tokenHeaders })
         .then(setPayment)
-        .catch((e) => toast.error(e.message))
+        .catch((e) => toast.error(tError(e.message)))
         .finally(() => router.replace(`/checkout/pay/${order.id}${q}`));
     }
-  }, [paypalReturn, payment, q, order.id, router, t]);
+  }, [paypalReturn, payment, q, tokenHeaders, order.id, router, t, tError]);
 
   const create = useCallback(async (m: MethodDto["code"], opts: { currency?: "USD" | "KHR"; network?: string | null } = {}) => {
     setCreating(true);
     try {
-      const p = await api<PaymentViewDto>(`/api/orders/${order.id}/pay${q}`, { method: "POST", body: { method: m, currency: m === "KHQR" ? opts.currency ?? currency : undefined, network: m === "USDT" ? opts.network ?? network : undefined } });
+      const p = await api<PaymentViewDto>(`/api/orders/${order.id}/pay`, { method: "POST", headers: tokenHeaders, body: { method: m, currency: m === "KHQR" ? opts.currency ?? currency : undefined, network: m === "USDT" ? opts.network ?? network : undefined } });
       setPayment(p);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(tError((e as Error).message));
     } finally {
       setCreating(false);
     }
-  }, [order.id, q, currency, network]);
+  }, [order.id, tokenHeaders, currency, network, tError]);
 
   const rxBlocked = order.prescriptionStatus === "PENDING_REVIEW";
   const rejected = order.prescriptionStatus === "REJECTED";
@@ -120,7 +121,7 @@ export function PayClient({ order, token, methods, initialPayment, paypalReturn 
                       <button key={m.code} type="button" disabled={!m.ready || creating} onClick={() => choose(m)} title={m.reason}
                         className={cn("flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50", method === m.code ? "border-primary bg-secondary ring-2 ring-primary/20" : "hover:border-primary/50")}>
                         <Icon className="size-6 text-primary" />
-                        <span className="font-semibold">{locale === "km" ? m.nameKm : m.nameEn}</span>
+                        <span className="font-semibold">{payMethodName(m)}</span>
                         {!m.ready && <span className="text-[11px] text-muted-foreground">{t("pay.unavailable")}{m.reason ? ` – ${m.reason}` : ""}</span>}
                       </button>
                     );
@@ -148,7 +149,7 @@ export function PayClient({ order, token, methods, initialPayment, paypalReturn 
               <section className="rounded-2xl border bg-white p-5 shadow-sm">
                 {creating ? <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground"><Loader2 className="animate-spin" /> {t("common.loading")}</div>
                   : payment && payment.method === method ? (
-                    <PaymentPanel payment={payment} checkUrl={`/api/payments/${payment.id}/check${q}`} hashUrl={`/api/payments/${payment.id}/usdt-hash${q}`} captureUrl={`/api/payments/${payment.id}/paypal-capture${q}`}
+                    <PaymentPanel payment={payment} checkUrl={`/api/payments/${payment.id}/check`} hashUrl={`/api/payments/${payment.id}/usdt-hash`} captureUrl={`/api/payments/${payment.id}/paypal-capture`} requestHeaders={tokenHeaders}
                       onPaid={() => { setPaid(true); router.refresh(); }} onRetry={() => method && create(method)} />
                   ) : <div className="py-12 text-center text-sm text-muted-foreground">{t("pay.choose")}</div>}
               </section>

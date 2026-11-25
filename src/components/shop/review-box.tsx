@@ -12,7 +12,7 @@ import { api, FetchError } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
 
 export function ReviewBox({ slug, canReview }: { slug: string; canReview: boolean }) {
-  const { t } = useI18n();
+  const { t, tError } = useI18n();
   const router = useRouter();
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
@@ -33,13 +33,13 @@ export function ReviewBox({ slug, canReview }: { slug: string; canReview: boolea
         method: "POST",
         body: { rating, comment, _bot: bot.getPayload() },
       });
-      toast.success("Thank you for your review!");
+      toast.success(t("product.thankReview"));
       setComment("");
       router.refresh();
     } catch (err) {
       const fe = err as FetchError;
       bot.handleError(fe);
-      toast.error(fe.message);
+      toast.error(tError(fe.message));
     } finally {
       setBusy(false);
     }
@@ -50,15 +50,15 @@ export function ReviewBox({ slug, canReview }: { slug: string; canReview: boolea
       <HoneypotField value={bot.hp} onChange={bot.setHp} />
       <div className="flex items-center gap-1">
         {[1, 2, 3, 4, 5].map((n) => (
-          <button key={n} type="button" onClick={() => setRating(n)} aria-label={`${n} stars`}>
+          <button key={n} type="button" onClick={() => setRating(n)} aria-label={t("product.starsAria", { n })}>
             <Star className={cn("size-4", n <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground")} />
           </button>
         ))}
       </div>
-      <Textarea rows={2} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Write a short review…" maxLength={500} className="text-xs" />
+      <Textarea rows={2} value={comment} onChange={(e) => setComment(e.target.value)} placeholder={t("product.writeReview")} maxLength={500} className="text-xs" />
       <BotProtectionWidget bot={bot} compact />
       <Button type="submit" size="sm" disabled={busy || (bot.visible && bot.solving)}>
-        {busy && <Loader2 className="animate-spin" />} Post review
+        {busy && <Loader2 className="animate-spin" />} {t("product.postReview")}
       </Button>
     </form>
   );

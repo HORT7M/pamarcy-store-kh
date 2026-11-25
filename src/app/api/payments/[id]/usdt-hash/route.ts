@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiHandler, clientIp, parseBody, parseParams, parseQuery } from "@/lib/api";
 import { idParamSchema, orderTokenQuerySchema, usdtHashSchema } from "@/lib/validators";
-import { assertPaymentAccess } from "@/lib/order-access";
+import { assertPaymentMutationAccess, resolveOrderToken } from "@/lib/order-access";
 import { submitUsdtHash, paymentView } from "@/lib/services/payments";
 import { prisma } from "@/lib/db";
 import { rateLimitHeaders, rateLimitMulti } from "@/lib/rate-limit";
@@ -25,7 +25,7 @@ export const POST = apiHandler<{ id: string }>(
       );
     }
 
-    await assertPaymentAccess(id, token);
+    await assertPaymentMutationAccess(id, resolveOrderToken(req, token));
     const { txHash } = await parseBody(req, usdtHashSchema);
     await submitUsdtHash(id, txHash);
     const view = await paymentView(

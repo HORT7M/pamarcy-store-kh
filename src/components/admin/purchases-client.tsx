@@ -19,7 +19,7 @@ type PoRow = { id: string; number: string; status: string; orderedAt: string; re
 type MedOpt = { id: string; nameEn: string; sku: string; costPrice: string };
 
 export function PurchasesClient({ suppliers, medicines, canWrite }: { suppliers: { id: string; name: string }[]; medicines: MedOpt[]; canWrite: boolean }) {
-  const { money } = useI18n();
+  const { money, t, tryT, tError } = useI18n();
   const router = useRouter();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
@@ -53,10 +53,10 @@ export function PurchasesClient({ suppliers, medicines, canWrite }: { suppliers:
         method: "POST",
         body: { supplierId, shippingCost: Number(shippingCost || 0), notes: notes || null, items: lines.map((l) => ({ medicineId: l.medicineId, quantity: Number(l.quantity), unitCost: Number(l.unitCost) })) },
       });
-      toast.success("Purchase order created");
+      toast.success(t("purchasesAdmin.poCreatedToast"));
       setOpen(false);
       router.push(`/admin/purchases/${po.id}`);
-    } catch (err) { toast.error((err as Error).message); }
+    } catch (err) { toast.error(tError((err as Error).message)); }
     finally { setBusy(false); }
   }
 
@@ -65,22 +65,30 @@ export function PurchasesClient({ suppliers, medicines, canWrite }: { suppliers:
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Purchase Management"
-        subtitle="Create purchase orders to suppliers and receive stock into FEFO batches"
-        actions={canWrite && <Button onClick={() => setOpen(true)}><Plus /> New Purchase Order</Button>}
+        title={t("purchasesAdmin.title")}
+        subtitle={t("purchasesAdmin.subtitle")}
+        actions={canWrite && <Button onClick={() => setOpen(true)}><Plus /> {t("purchasesAdmin.newPo")}</Button>}
       />
       <div className="flex flex-wrap gap-2 rounded-2xl border bg-white p-3 shadow-sm">
-        <div className="relative min-w-56 flex-1"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Search PO # or supplier…" className="pl-9" /></div>
+        <div className="relative min-w-56 flex-1"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder={t("purchasesAdmin.searchPh")} className="pl-9" /></div>
         <select className="h-9 rounded-md border bg-white px-3 text-sm" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
-          <option value="">All statuses</option>
-          {["ORDERED", "PARTIALLY_RECEIVED", "RECEIVED", "CANCELLED"].map((s) => <option key={s} value={s}>{s}</option>)}
+          <option value="">{t("purchasesAdmin.allStatuses")}</option>
+          {["ORDERED", "PARTIALLY_RECEIVED", "RECEIVED", "CANCELLED"].map((s) => <option key={s} value={s}>{tryT(`status.${s}`, s)}</option>)}
         </select>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-            <tr><th className="p-3">PO #</th><th className="p-3">Supplier</th><th className="p-3">Ordered</th><th className="p-3">Received</th><th className="p-3">Status</th><th className="p-3 text-right">Items</th><th className="p-3 text-right">Total Cost</th></tr>
+            <tr>
+              <th className="p-3">{t("purchasesAdmin.colPoNo")}</th>
+              <th className="p-3">{t("purchasesAdmin.colSupplier")}</th>
+              <th className="p-3">{t("purchasesAdmin.colOrdered")}</th>
+              <th className="p-3">{t("purchasesAdmin.colReceived")}</th>
+              <th className="p-3">{t("common.status")}</th>
+              <th className="p-3 text-right">{t("purchasesAdmin.colItems")}</th>
+              <th className="p-3 text-right">{t("purchasesAdmin.colTotalCost")}</th>
+            </tr>
           </thead>
           <tbody className="divide-y">
             {data?.items.map((p) => (
@@ -101,38 +109,38 @@ export function PurchasesClient({ suppliers, medicines, canWrite }: { suppliers:
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader><DialogTitle>Create Purchase Order</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("purchasesAdmin.createPoTitle")}</DialogTitle></DialogHeader>
           <form onSubmit={createPo} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label>Supplier *</Label>
+                <Label>{t("purchasesAdmin.colSupplier")} *</Label>
                 <select className={sel} value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
                   {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
-              <div className="space-y-1"><Label>Shipping / Freight Cost (USD)</Label><Input type="number" min={0} step="0.01" value={shippingCost} onChange={(e) => setShippingCost(e.target.value)} /></div>
+              <div className="space-y-1"><Label>{t("purchasesAdmin.shippingCostUsd")}</Label><Input type="number" min={0} step="0.01" value={shippingCost} onChange={(e) => setShippingCost(e.target.value)} /></div>
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between"><Label>Medicines</Label><Button type="button" size="sm" variant="outline" onClick={() => setLines([...lines, { medicineId: medicines[0]?.id ?? "", quantity: "20", unitCost: medicines[0]?.costPrice ?? "1" }])}><Plus className="size-3.5" /> Add Row</Button></div>
+              <div className="flex items-center justify-between"><Label>{t("purchasesAdmin.medicinesLabel")}</Label><Button type="button" size="sm" variant="outline" onClick={() => setLines([...lines, { medicineId: medicines[0]?.id ?? "", quantity: "20", unitCost: medicines[0]?.costPrice ?? "1" }])}><Plus className="size-3.5" /> {t("purchasesAdmin.addRow")}</Button></div>
               {lines.map((l, idx) => (
                 <div key={idx} className="grid grid-cols-[1fr_90px_110px_36px] items-center gap-2">
                   <select className={sel} value={l.medicineId} onChange={(e) => { const m = medicines.find((x) => x.id === e.target.value); setLines(lines.map((r, i) => (i === idx ? { ...r, medicineId: e.target.value, unitCost: m?.costPrice ?? r.unitCost } : r))); }}>
                     {medicines.map((m) => <option key={m.id} value={m.id}>{m.sku} — {m.nameEn}</option>)}
                   </select>
-                  <Input type="number" min={1} placeholder="Qty" value={l.quantity} onChange={(e) => setLines(lines.map((r, i) => (i === idx ? { ...r, quantity: e.target.value } : r)))} />
-                  <Input type="number" min={0} step="0.01" placeholder="Cost $" value={l.unitCost} onChange={(e) => setLines(lines.map((r, i) => (i === idx ? { ...r, unitCost: e.target.value } : r)))} />
+                  <Input type="number" min={1} placeholder={t("common.qty")} value={l.quantity} onChange={(e) => setLines(lines.map((r, i) => (i === idx ? { ...r, quantity: e.target.value } : r)))} />
+                  <Input type="number" min={0} step="0.01" placeholder={t("purchasesAdmin.costPh")} value={l.unitCost} onChange={(e) => setLines(lines.map((r, i) => (i === idx ? { ...r, unitCost: e.target.value } : r)))} />
                   <Button type="button" size="icon" variant="ghost" className="text-red-600" disabled={lines.length <= 1} onClick={() => setLines(lines.filter((_, i) => i !== idx))}><Trash2 className="size-4" /></Button>
                 </div>
               ))}
             </div>
 
-            <div className="space-y-1"><Label>Notes</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+            <div className="space-y-1"><Label>{t("suppliersAdmin.notes")}</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
             <div className="flex items-center justify-between rounded-xl bg-muted p-3 text-sm">
-              <span>Subtotal: ${subtotal.toFixed(2)} + Shipping: ${Number(shippingCost || 0).toFixed(2)}</span>
-              <span className="text-base font-bold text-primary">Total: ${total.toFixed(2)}</span>
+              <span>{t("cart.subtotal")}: ${subtotal.toFixed(2)} + {t("purchasesAdmin.shippingShort")}: ${Number(shippingCost || 0).toFixed(2)}</span>
+              <span className="text-base font-bold text-primary">{t("common.total")}: ${total.toFixed(2)}</span>
             </div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" disabled={busy}>{busy && <Loader2 className="animate-spin" />} Create PO</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>{t("common.cancel")}</Button><Button type="submit" disabled={busy}>{busy && <Loader2 className="animate-spin" />} {t("purchasesAdmin.createPoBtn")}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

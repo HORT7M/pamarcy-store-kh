@@ -3,6 +3,7 @@ import Image from "next/image";
 import { ShieldCheck, BadgeCheck, Truck, CreditCard, ArrowRight, FileText } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getT } from "@/lib/i18n/server";
+import { localizeBanner, localizeCategoryName } from "@/lib/i18n/translate";
 import { searchProducts } from "@/lib/catalog";
 import { ProductCard } from "@/components/shop/product-card";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ function Section({ title, href, children, viewAll }: { title: string; href: stri
 }
 
 export default async function HomePage() {
-  const { t, locale } = await getT();
+  const { t, tryT, locale } = await getT();
   const [categories, banners, featured, best, newest, offers] = await Promise.all([
     prisma.category.findMany({ where: { deletedAt: null, isActive: true }, orderBy: { sortOrder: "asc" }, include: { _count: { select: { medicines: { where: { deletedAt: null, isActive: true } } } } } }),
     prisma.banner.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" }, take: 3 }),
@@ -34,7 +35,7 @@ export default async function HomePage() {
     searchProducts({ sort: "newest", pageSize: 4 }),
     searchProducts({ offers: true, pageSize: 4 }),
   ]);
-  const L = (o: { nameEn: string; nameKm: string }) => (locale === "km" ? o.nameKm : o.nameEn);
+  const L = (o: { slug?: string; nameEn: string; nameKm: string }) => localizeCategoryName(o, locale, tryT);
   const grid = "grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4";
   const why = [
     { icon: ShieldCheck, title: t("home.why1"), d: t("home.why1d") },
@@ -62,7 +63,7 @@ export default async function HomePage() {
             <Image src="/images/banners/hero-pharmacy.jpg" alt="Pharmacy shelves with medicines" fill priority sizes="(max-width:768px) 100vw, 50vw" className="object-cover" />
             <div className="absolute bottom-4 left-4 rounded-2xl bg-white/95 px-4 py-3 shadow-lg">
               <div className="text-2xl font-bold text-primary">25</div>
-              <div className="text-xs text-muted-foreground">{locale === "km" ? "ខេត្តក្រុងដែលយើងដឹកជញ្ជូន" : "provinces delivered"}</div>
+              <div className="text-xs text-muted-foreground">{t("home.provincesDelivered")}</div>
             </div>
           </div>
         </div>
@@ -108,13 +109,14 @@ export default async function HomePage() {
           {banners.slice(0, 2).map((b) => {
             const bannerImg = safeImageSrc(b.imageUrl);
             const bannerHref = safeNavigationHref(b.link, "/shop");
+            const bText = localizeBanner(b, locale, t);
             return (
               <Link key={b.id} href={bannerHref} className="group relative flex min-h-48 items-end overflow-hidden rounded-3xl bg-primary/80 shadow-md">
-                {bannerImg && <Image src={bannerImg} alt={locale === "km" ? b.titleKm : b.titleEn} fill sizes="(max-width:768px) 100vw, 50vw" className="object-cover transition duration-500 group-hover:scale-105" unoptimized={bannerImg.startsWith("/api/")} />}
+                {bannerImg && <Image src={bannerImg} alt={bText.title} fill sizes="(max-width:768px) 100vw, 50vw" className="object-cover transition duration-500 group-hover:scale-105" unoptimized={bannerImg.startsWith("/api/")} />}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
                 <div className="relative p-6 text-white">
-                  <h3 className="text-xl font-bold md:text-2xl">{locale === "km" ? b.titleKm : b.titleEn}</h3>
-                  <p className="mt-1 text-sm text-white/85">{locale === "km" ? b.subtitleKm : b.subtitleEn}</p>
+                  <h3 className="text-xl font-bold md:text-2xl">{bText.title}</h3>
+                  <p className="mt-1 text-sm text-white/85">{bText.subtitle}</p>
                   <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-primary">{t("home.shopNow")} <ArrowRight className="size-4" /></span>
                 </div>
               </Link>

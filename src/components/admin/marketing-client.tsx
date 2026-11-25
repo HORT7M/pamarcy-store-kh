@@ -11,6 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ProductImage } from "@/components/common/product-image";
 import { PageHeader } from "./common";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { localizeBanner } from "@/lib/i18n/translate";
 import { formatDate, toDateInput } from "@/lib/date";
 import { api } from "@/lib/fetcher";
 
@@ -18,6 +20,7 @@ type Disc = { id: string; code: string; description: string | null; type: "PERCE
 type Banner = { id: string; titleEn: string; titleKm: string; subtitleEn: string | null; subtitleKm: string | null; imageUrl: string; link: string | null; sortOrder: number; isActive: boolean };
 
 export function MarketingClient() {
+  const { t, tError, locale } = useI18n();
   const [discounts, setDiscounts] = useState<Disc[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [dModal, setDModal] = useState<Disc | "new" | null>(null);
@@ -42,12 +45,12 @@ export function MarketingClient() {
       const body = { ...dForm, value: Number(dForm.value), minSubtotal: Number(dForm.minSubtotal || 0), maxDiscount: dForm.maxDiscount ? Number(dForm.maxDiscount) : null, usageLimit: dForm.usageLimit ? Number(dForm.usageLimit) : null, startsAt: dForm.startsAt || null, endsAt: dForm.endsAt || null };
       if (dModal === "new") await api("/api/admin/discounts", { method: "POST", body });
       else if (dModal) await api(`/api/admin/discounts/${dModal.id}`, { method: "PUT", body });
-      toast.success("Discount saved"); setDModal(null); load();
-    } catch (e) { toast.error((e as Error).message); }
+      toast.success(t("marketingAdmin.discountSavedToast")); setDModal(null); load();
+    } catch (e) { toast.error(tError((e as Error).message)); }
     finally { setBusy(false); }
   }
   async function delDisc(id: string) {
-    if (!confirm("Delete discount code?")) return;
+    if (!confirm(t("marketingAdmin.confirmDeleteDiscount"))) return;
     await api(`/api/admin/discounts/${id}`, { method: "DELETE" }); load();
   }
 
@@ -56,11 +59,11 @@ export function MarketingClient() {
     setBForm(b ? { titleEn: b.titleEn, titleKm: b.titleKm, subtitleEn: b.subtitleEn ?? "", subtitleKm: b.subtitleKm ?? "", imageUrl: b.imageUrl, link: b.link ?? "", sortOrder: String(b.sortOrder), isActive: b.isActive } : { titleEn: "", titleKm: "", subtitleEn: "", subtitleKm: "", imageUrl: "", link: "/shop", sortOrder: String(banners.length + 1), isActive: true });
   }
   async function uploadBannerImg(file: File) {
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return toast.error("Only JPG, PNG or WebP images are allowed");
-    if (file.size > 5 * 1024 * 1024) return toast.error("File too large (max 5 MB)");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return toast.error(t("common.error"));
+    if (file.size > 5 * 1024 * 1024) return toast.error(t("messages.fileTooLarge"));
     const fd = new FormData(); fd.append("file", file); fd.append("folder", "banners");
     try { const r = await api<{ url: string }>("/api/uploads", { method: "POST", body: fd }); setBForm((f) => ({ ...f, imageUrl: r.url })); }
-    catch (e) { toast.error((e as Error).message); }
+    catch (e) { toast.error(tError((e as Error).message)); }
   }
   async function saveBanner() {
     setBusy(true);
@@ -68,34 +71,47 @@ export function MarketingClient() {
       const body = { ...bForm, sortOrder: Number(bForm.sortOrder || 0) };
       if (bModal === "new") await api("/api/admin/banners", { method: "POST", body });
       else if (bModal) await api(`/api/admin/banners/${bModal.id}`, { method: "PUT", body });
-      toast.success("Banner saved"); setBModal(null); load();
-    } catch (e) { toast.error((e as Error).message); }
+      toast.success(t("marketingAdmin.bannerSavedToast")); setBModal(null); load();
+    } catch (e) { toast.error(tError((e as Error).message)); }
     finally { setBusy(false); }
   }
   async function delBanner(id: string) {
-    if (!confirm("Delete banner?")) return;
+    if (!confirm(t("marketingAdmin.confirmDeleteBanner"))) return;
     await api(`/api/admin/banners/${id}`, { method: "DELETE" }); load();
   }
 
   return (
     <div>
-      <PageHeader title="Discounts & Promotion Banners" subtitle="Manage promo codes and homepage marketing banners" />
+      <PageHeader title={t("marketingAdmin.title")} subtitle={t("marketingAdmin.subtitle")} />
       <Tabs defaultValue="discounts">
-        <TabsList className="mb-4"><TabsTrigger value="discounts">Discount Codes ({discounts.length})</TabsTrigger><TabsTrigger value="banners">Homepage Banners ({banners.length})</TabsTrigger></TabsList>
+        <TabsList className="mb-4">
+          <TabsTrigger value="discounts">{t("marketingAdmin.tabDiscounts", { n: discounts.length })}</TabsTrigger>
+          <TabsTrigger value="banners">{t("marketingAdmin.tabBanners", { n: banners.length })}</TabsTrigger>
+        </TabsList>
         <TabsContent value="discounts" className="space-y-4">
-          <div className="flex justify-end"><Button onClick={() => openDisc()}><Plus /> New Discount Code</Button></div>
+          <div className="flex justify-end"><Button onClick={() => openDisc()}><Plus /> {t("marketingAdmin.newDiscount")}</Button></div>
           <div className="overflow-x-auto rounded-2xl border bg-white shadow-sm">
             <table className="w-full text-sm">
-              <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="p-3">Code</th><th className="p-3">Value</th><th className="p-3">Min Order</th><th className="p-3">Usage</th><th className="p-3">Valid</th><th className="p-3">Active</th><th className="p-3 text-right">Actions</th></tr></thead>
+              <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="p-3">{t("marketingAdmin.colCode")}</th>
+                  <th className="p-3">{t("marketingAdmin.colValue")}</th>
+                  <th className="p-3">{t("marketingAdmin.colMinOrder")}</th>
+                  <th className="p-3">{t("marketingAdmin.colUsage")}</th>
+                  <th className="p-3">{t("marketingAdmin.colValid")}</th>
+                  <th className="p-3">{t("common.active")}</th>
+                  <th className="p-3 text-right">{t("common.actions")}</th>
+                </tr>
+              </thead>
               <tbody className="divide-y">
                 {discounts.map((d) => (
                   <tr key={d.id}>
                     <td className="p-3"><div className="font-mono font-bold text-primary">{d.code}</div><div className="text-xs text-muted-foreground">{d.description}</div></td>
-                    <td className="p-3 font-semibold">{d.type === "PERCENTAGE" ? `${Number(d.value)}%` : `$${Number(d.value).toFixed(2)}`}{d.maxDiscount ? ` (max $${Number(d.maxDiscount)})` : ""}</td>
+                    <td className="p-3 font-semibold">{d.type === "PERCENTAGE" ? `${Number(d.value)}%` : `$${Number(d.value).toFixed(2)}`}{d.maxDiscount ? ` (${t("marketingAdmin.maxPrefix")} $${Number(d.maxDiscount)})` : ""}</td>
                     <td className="p-3">${Number(d.minSubtotal).toFixed(2)}</td>
                     <td className="p-3">{d.usedCount}{d.usageLimit ? ` / ${d.usageLimit}` : ""}</td>
                     <td className="p-3 text-xs">{formatDate(d.startsAt)} → {formatDate(d.endsAt)}</td>
-                    <td className="p-3 text-xs">{d.isActive ? "Active" : "Paused"}</td>
+                    <td className="p-3 text-xs">{d.isActive ? t("common.active") : t("common.paused")}</td>
                     <td className="p-3 text-right"><Button size="icon" variant="ghost" onClick={() => openDisc(d)}><Pencil className="size-4" /></Button><Button size="icon" variant="ghost" className="text-red-600" onClick={() => delDisc(d.id)}><Trash2 className="size-4" /></Button></td>
                   </tr>
                 ))}
@@ -104,70 +120,74 @@ export function MarketingClient() {
           </div>
         </TabsContent>
         <TabsContent value="banners" className="space-y-4">
-          <div className="flex justify-end"><Button onClick={() => openBanner()}><Plus /> Add Banner</Button></div>
+          <div className="flex justify-end"><Button onClick={() => openBanner()}><Plus /> {t("marketingAdmin.addBanner")}</Button></div>
           <div className="grid gap-4 md:grid-cols-2">
-            {banners.map((b) => (
-              <div key={b.id} className="overflow-hidden rounded-2xl border bg-white shadow-sm">
-                <ProductImage src={b.imageUrl} alt={b.titleEn} className="aspect-[16/7] w-full" sizes="500px" />
-                <div className="flex items-center justify-between p-4">
-                  <div><div className="font-semibold">{b.titleEn}</div><div className="text-xs text-muted-foreground">{b.titleKm} · {b.link}</div></div>
-                  <div className="flex gap-1"><Button size="icon" variant="ghost" onClick={() => openBanner(b)}><Pencil className="size-4" /></Button><Button size="icon" variant="ghost" className="text-red-600" onClick={() => delBanner(b.id)}><Trash2 className="size-4" /></Button></div>
+            {banners.map((b) => {
+              const bText = localizeBanner(b, locale, t);
+              return (
+                <div key={b.id} className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+                  <ProductImage src={b.imageUrl} alt={bText.title} className="aspect-[16/7] w-full" sizes="500px" />
+                  <div className="flex items-center justify-between p-4">
+                    <div><div className="font-semibold">{bText.title}</div><div className="text-xs text-muted-foreground">{b.titleKm} · {b.link}</div></div>
+                    <div className="flex gap-1"><Button size="icon" variant="ghost" onClick={() => openBanner(b)}><Pencil className="size-4" /></Button><Button size="icon" variant="ghost" className="text-red-600" onClick={() => delBanner(b.id)}><Trash2 className="size-4" /></Button></div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </TabsContent>
       </Tabs>
 
       <Dialog open={!!dModal} onOpenChange={(o) => !o && setDModal(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{dModal === "new" ? "New Discount Code" : "Edit Discount Code"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{dModal === "new" ? t("marketingAdmin.newDiscountTitle") : t("marketingAdmin.editDiscountTitle")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label>Code *</Label><Input value={dForm.code} onChange={(e) => setDForm({ ...dForm, code: e.target.value.toUpperCase() })} className="font-mono uppercase" /></div>
+              <div className="space-y-1"><Label>{t("marketingAdmin.colCode")} *</Label><Input value={dForm.code} onChange={(e) => setDForm({ ...dForm, code: e.target.value.toUpperCase() })} className="font-mono uppercase" /></div>
               <div className="space-y-1">
-                <Label>Type</Label>
+                <Label>{t("marketingAdmin.typeLabel")}</Label>
                 <select className="h-9 w-full rounded-md border bg-white px-3 text-sm" value={dForm.type} onChange={(e) => setDForm({ ...dForm, type: e.target.value as "PERCENTAGE" | "FIXED" })}>
-                  <option value="PERCENTAGE">Percentage (%)</option><option value="FIXED">Fixed USD ($)</option>
+                  <option value="PERCENTAGE">{t("marketingAdmin.typePercentage")}</option>
+                  <option value="FIXED">{t("marketingAdmin.typeFixed")}</option>
                 </select>
               </div>
-              <div className="space-y-1"><Label>Value *</Label><Input type="number" step="0.01" value={dForm.value} onChange={(e) => setDForm({ ...dForm, value: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Min subtotal ($)</Label><Input type="number" step="0.01" value={dForm.minSubtotal} onChange={(e) => setDForm({ ...dForm, minSubtotal: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Max discount ($)</Label><Input type="number" step="0.01" value={dForm.maxDiscount} onChange={(e) => setDForm({ ...dForm, maxDiscount: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Usage limit</Label><Input type="number" value={dForm.usageLimit} onChange={(e) => setDForm({ ...dForm, usageLimit: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Start date</Label><Input type="date" value={dForm.startsAt} onChange={(e) => setDForm({ ...dForm, startsAt: e.target.value })} /></div>
-              <div className="space-y-1"><Label>End date</Label><Input type="date" value={dForm.endsAt} onChange={(e) => setDForm({ ...dForm, endsAt: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("marketingAdmin.valueLabel")} *</Label><Input type="number" step="0.01" value={dForm.value} onChange={(e) => setDForm({ ...dForm, value: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("marketingAdmin.minSubtotalUsd")}</Label><Input type="number" step="0.01" value={dForm.minSubtotal} onChange={(e) => setDForm({ ...dForm, minSubtotal: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("marketingAdmin.maxDiscountUsd")}</Label><Input type="number" step="0.01" value={dForm.maxDiscount} onChange={(e) => setDForm({ ...dForm, maxDiscount: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("marketingAdmin.usageLimit")}</Label><Input type="number" value={dForm.usageLimit} onChange={(e) => setDForm({ ...dForm, usageLimit: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("marketingAdmin.startDate")}</Label><Input type="date" value={dForm.startsAt} onChange={(e) => setDForm({ ...dForm, startsAt: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("marketingAdmin.endDate")}</Label><Input type="date" value={dForm.endsAt} onChange={(e) => setDForm({ ...dForm, endsAt: e.target.value })} /></div>
             </div>
-            <div className="space-y-1"><Label>Description</Label><Input value={dForm.description} onChange={(e) => setDForm({ ...dForm, description: e.target.value })} /></div>
-            <div className="flex items-center gap-2"><Switch checked={dForm.isActive} onCheckedChange={(v) => setDForm({ ...dForm, isActive: v })} /><Label>Active</Label></div>
+            <div className="space-y-1"><Label>{t("marketingAdmin.description")}</Label><Input value={dForm.description} onChange={(e) => setDForm({ ...dForm, description: e.target.value })} /></div>
+            <div className="flex items-center gap-2"><Switch checked={dForm.isActive} onCheckedChange={(v) => setDForm({ ...dForm, isActive: v })} /><Label>{t("common.active")}</Label></div>
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setDModal(null)}>Cancel</Button><Button onClick={saveDisc} disabled={busy}>{busy && <Loader2 className="animate-spin" />} Save</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setDModal(null)}>{t("common.cancel")}</Button><Button onClick={saveDisc} disabled={busy}>{busy && <Loader2 className="animate-spin" />} {t("common.save")}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!bModal} onOpenChange={(o) => !o && setBModal(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{bModal === "new" ? "New Banner" : "Edit Banner"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{bModal === "new" ? t("marketingAdmin.newBannerTitle") : t("marketingAdmin.editBannerTitle")}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label>Title (English) *</Label><Input value={bForm.titleEn} onChange={(e) => setBForm({ ...bForm, titleEn: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Title (Khmer) *</Label><Input value={bForm.titleKm} onChange={(e) => setBForm({ ...bForm, titleKm: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Subtitle (English)</Label><Input value={bForm.subtitleEn} onChange={(e) => setBForm({ ...bForm, subtitleEn: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Subtitle (Khmer)</Label><Input value={bForm.subtitleKm} onChange={(e) => setBForm({ ...bForm, subtitleKm: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Target link</Label><Input value={bForm.link} onChange={(e) => setBForm({ ...bForm, link: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Sort order</Label><Input type="number" value={bForm.sortOrder} onChange={(e) => setBForm({ ...bForm, sortOrder: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("marketingAdmin.titleEn")} *</Label><Input value={bForm.titleEn} onChange={(e) => setBForm({ ...bForm, titleEn: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("marketingAdmin.titleKm")} *</Label><Input value={bForm.titleKm} onChange={(e) => setBForm({ ...bForm, titleKm: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("marketingAdmin.subtitleEn")}</Label><Input value={bForm.subtitleEn} onChange={(e) => setBForm({ ...bForm, subtitleEn: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("marketingAdmin.subtitleKm")}</Label><Input value={bForm.subtitleKm} onChange={(e) => setBForm({ ...bForm, subtitleKm: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("marketingAdmin.targetLink")}</Label><Input value={bForm.link} onChange={(e) => setBForm({ ...bForm, link: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("marketingAdmin.sortOrder")}</Label><Input type="number" value={bForm.sortOrder} onChange={(e) => setBForm({ ...bForm, sortOrder: e.target.value })} /></div>
             </div>
             <div className="space-y-1.5">
-              <Label>Banner image *</Label>
+              <Label>{t("marketingAdmin.bannerImage")} *</Label>
               <div className="flex items-center gap-3">
                 <ProductImage src={bForm.imageUrl || null} alt="" className="h-16 w-28 rounded-lg" sizes="112px" />
-                <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed p-3 text-xs font-medium text-primary"><Upload className="size-4" /> Upload real photo<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => e.target.files?.[0] && uploadBannerImg(e.target.files[0])} /></label>
+                <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed p-3 text-xs font-medium text-primary"><Upload className="size-4" /> {t("marketingAdmin.uploadRealPhoto")}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => e.target.files?.[0] && uploadBannerImg(e.target.files[0])} /></label>
               </div>
-              <Input value={bForm.imageUrl} onChange={(e) => setBForm({ ...bForm, imageUrl: e.target.value })} placeholder="Or image path/URL…" className="text-xs" />
+              <Input value={bForm.imageUrl} onChange={(e) => setBForm({ ...bForm, imageUrl: e.target.value })} placeholder={t("marketingAdmin.orImagePath")} className="text-xs" />
             </div>
-            <div className="flex items-center gap-2"><Switch checked={bForm.isActive} onCheckedChange={(v) => setBForm({ ...bForm, isActive: v })} /><Label>Active</Label></div>
+            <div className="flex items-center gap-2"><Switch checked={bForm.isActive} onCheckedChange={(v) => setBForm({ ...bForm, isActive: v })} /><Label>{t("common.active")}</Label></div>
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setBModal(null)}>Cancel</Button><Button onClick={saveBanner} disabled={busy}>{busy && <Loader2 className="animate-spin" />} Save</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setBModal(null)}>{t("common.cancel")}</Button><Button onClick={saveBanner} disabled={busy}>{busy && <Loader2 className="animate-spin" />} {t("common.save")}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

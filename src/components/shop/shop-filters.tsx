@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 export function ShopFilters({ categories, brands }: { categories: { slug: string; nameEn: string; nameKm: string }[]; brands: { slug: string; name: string }[] }) {
-  const { t, pick } = useI18n();
+  const { t, catName } = useI18n();
   const router = useRouter();
   const sp = useSearchParams();
   const [open, setOpen] = useState(false);
@@ -44,7 +44,7 @@ export function ShopFilters({ categories, brands }: { categories: { slug: string
           <div className="space-y-0.5">
             <button onClick={() => update({ category: null })} className={cn("block w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-secondary", !sp.get("category") && "bg-secondary font-medium text-secondary-foreground")}>{t("common.all")}</button>
             {categories.map((c) => (
-              <button key={c.slug} onClick={() => update({ category: c.slug })} className={cn("block w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-secondary", sp.get("category") === c.slug && "bg-secondary font-medium text-secondary-foreground")}>{pick(c, "name")}</button>
+              <button key={c.slug} onClick={() => update({ category: c.slug })} className={cn("block w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-secondary", sp.get("category") === c.slug && "bg-secondary font-medium text-secondary-foreground")}>{catName(c)}</button>
             ))}
           </div>
         </div>

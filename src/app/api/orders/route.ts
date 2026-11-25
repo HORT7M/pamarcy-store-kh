@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { apiHandler, clientIp, parseBody, parseQuery, paginate } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { checkoutSchema, customerOrdersQuerySchema } from "@/lib/validators";
+import { ONLINE_ORDER_CREATE_FIELDS, pickAllowed } from "@/lib/allowlist";
 import { getCurrentUser, requireCustomer } from "@/lib/auth/session";
 import { createOrder } from "@/lib/services/orders";
 import { orderAccessToken } from "@/lib/order-access";
@@ -56,7 +57,8 @@ export const POST = apiHandler(
       );
     }
 
-    const { _bot, ...body } = await parseBody(req, createOrderSchema);
+    const parsed = await parseBody(req, createOrderSchema);
+    const orderFields = pickAllowed(parsed, ONLINE_ORDER_CREATE_FIELDS);
 
     // Check recent unpaid pending orders to protect FEFO inventory from automated reservation hoarding
     const thirtyMinAgo = new Date(Date.now() - 30 * 60_000);
@@ -66,46 +68,53 @@ export const POST = apiHandler(
         status: "PENDING",
         paymentStatus: "PENDING",
         createdAt: { gte: thirtyMinAgo },
-        ...(customerId ? { customerId } : { phone: body.phone }),
+        ...(customerId ? { customerId } : { phone: orderFields.phone }),
       },
     });
 
     await verifyBotProtection(req, {
       action: "checkout",
-      bot: _bot,
+      bot: parsed._bot,
       authenticated: Boolean(user),
       userId: user?.id ?? null,
-      identifier: body.phone,
+      identifier: orderFields.phone,
       recentUnpaidOrders,
     });
 
+    // Explicit allowlist prevents injecting privileged CreateOrderInput fields (manualDiscount, staffCanDispenseRx, cashierId, notes, channel)
     const order = await createOrder(
-      { ...body, channel: "ONLINE", customerId },
+      {
+        ...orderFields,
+        channel: "ONLINE",
+        customerId,
+      },
       user?.id ?? null,
     );
 
     if (!user) {
-      recordGuestCheckoutSignal(ip, body.phone);
+      recordGuestCheckoutSignal(ip, orderFields.phone);
     }
 
-    if (customerId && body.saveAddress) {
-      const exists = await prisma.address.findFirst({
-        where: { customerId, province: body.province, district: body.district, street: body.street },
+    if (customerId && parsed.saveAddress) {
+      const sameArea = await prisma.address.findMany({
+        where: { customerId, province: orderFields.province, district: orderFields.district },
+        select: { id: true, street: true },
       });
+      const exists = sameArea.find((a) => (a.street ?? null) === (orderFields.street ?? null));
       if (!exists) {
         const count = await prisma.address.count({ where: { customerId } });
         if (count < 25) {
           await prisma.address.create({
             data: {
               customerId,
-              fullName: body.fullName,
-              phone: body.phone,
-              province: body.province,
-              district: body.district,
-              commune: body.commune,
-              village: body.village,
-              street: body.street,
-              instructions: body.instructions,
+              fullName: orderFields.fullName,
+              phone: orderFields.phone,
+              province: orderFields.province,
+              district: orderFields.district,
+              commune: orderFields.commune,
+              village: orderFields.village,
+              street: orderFields.street,
+              instructions: orderFields.instructions,
               isDefault: count === 0,
             },
           });
@@ -119,7 +128,7 @@ export const POST = apiHandler(
         number: order.number,
         total: order.total.toString(),
         prescriptionStatus: order.prescriptionStatus,
-        token: orderAccessToken(order.id),
+        token: customerId ? null : orderAccessToken(order.id),
       },
       { headers: rateLimitHeaders(rl) },
     );

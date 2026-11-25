@@ -127,6 +127,8 @@ describe("HTTP security headers configuration (unit)", () => {
     assert.ok((ts.get("connect-src") ?? []).includes("https://challenges.cloudflare.com"));
 
     const hc = parseCsp(buildPageCsp({ nonce: "n1", isDev: false, botProvider: "hcaptcha" }));
+    assert.ok((hc.get("script-src") ?? []).includes("https://hcaptcha.com"));
+    assert.ok((hc.get("frame-src") ?? []).includes("https://hcaptcha.com"));
     assert.ok((hc.get("frame-src") ?? []).includes("https://*.hcaptcha.com"));
     assert.ok((hc.get("connect-src") ?? []).includes("https://api.hcaptcha.com"));
   });
@@ -266,6 +268,27 @@ describe("Edge middleware security headers enforcement", () => {
     const svgRes = middleware(new NextRequest("http://localhost:3000/logo-mark.svg"));
     assert.equal(svgRes.headers.get("content-security-policy"), SVG_ASSET_CSP);
     assert.equal(svgRes.headers.get("x-content-type-options"), "nosniff");
+
+    // Local HTTP preview must NOT emit upgrade-insecure-requests even when APP_URL is https://
+    const origAppUrl = process.env.APP_URL;
+    try {
+      process.env.APP_URL = "https://pamarcy.com.kh";
+      const localHttpRes = middleware(new NextRequest("http://localhost:3000/shop"));
+      const localCsp = localHttpRes.headers.get("content-security-policy") ?? "";
+      assert.equal(localCsp.includes("upgrade-insecure-requests"), false, "Plain HTTP localhost must not emit upgrade-insecure-requests");
+
+      // Forwarded: proto=https MUST emit upgrade-insecure-requests
+      const fwdHttpsRes = middleware(
+        new NextRequest("http://pamarcy.com.kh/shop", {
+          headers: { forwarded: "for=203.0.113.10;proto=https", host: "pamarcy.com.kh" },
+        }),
+      );
+      const fwdCsp = fwdHttpsRes.headers.get("content-security-policy") ?? "";
+      assert.ok(fwdCsp.includes("upgrade-insecure-requests"), "Forwarded proto=https must emit upgrade-insecure-requests");
+    } finally {
+      if (origAppUrl === undefined) delete process.env.APP_URL;
+      else process.env.APP_URL = origAppUrl;
+    }
   });
 });
 

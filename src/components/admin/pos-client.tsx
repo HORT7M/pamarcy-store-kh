@@ -24,7 +24,7 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
   initialProducts: ProductCard[]; categories: { slug: string; nameEn: string; nameKm: string }[]; methods: MethodDto[];
   exchangeRate: number; canDispenseRx: boolean; canManualDiscount: boolean;
 }) {
-  const { locale } = useI18n();
+  const { locale, t, tryT, tError, catName } = useI18n();
   const km = locale === "km";
   const scanRef = useRef<HTMLInputElement>(null);
   const [products, setProducts] = useState(initialProducts);
@@ -46,12 +46,12 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
   useEffect(() => { scanRef.current?.focus(); }, []);
 
   function addItem(p: ProductCard) {
-    if (p.available <= 0) return toast.error(`${p.nameEn} is out of stock`);
-    if (p.requiresPrescription && !canDispenseRx) return toast.error("Prescription-only medicine: a licensed Pharmacist account is required to dispense.");
+    if (p.available <= 0) return toast.error(t("pos.outOfStockToast", { name: km ? p.nameKm : p.nameEn }));
+    if (p.requiresPrescription && !canDispenseRx) return toast.error(t("pos.rxOnlyToast"));
     setCart((prev) => {
       const ex = prev.find((l) => l.id === p.id);
       if (ex) {
-        if (ex.qty >= p.available) { toast.error(`Only ${p.available} available`); return prev; }
+        if (ex.qty >= p.available) { toast.error(t("pos.onlyAvailableToast", { n: p.available })); return prev; }
         return prev.map((l) => (l.id === p.id ? { ...l, qty: l.qty + 1 } : l));
       }
       return [...prev, { ...p, qty: 1 }];
@@ -69,10 +69,10 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
         setScan("");
       } else {
         setProducts(r.items);
-        if (!r.items.length) toast.info("No matching medicine");
+        if (!r.items.length) toast.info(t("pos.noMatchToast"));
       }
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(tError((err as Error).message));
     }
   }
 
@@ -102,7 +102,7 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
       setSale(r);
       setTendered(Number(r.order.total).toFixed(2));
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(tError((err as Error).message));
     } finally {
       setBusy(false);
     }
@@ -112,15 +112,15 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
     if (!sale) return;
     const due = Number(sale.order.total);
     const cash = Number(tendered);
-    if (isNaN(cash) || cash + 0.001 < due) return toast.error("Tendered cash is less than total due");
+    if (isNaN(cash) || cash + 0.001 < due) return toast.error(t("pos.insufficientCashToast"));
     setBusy(true);
     try {
       const p = await api<PaymentViewDto>(`/api/admin/payments/${sale.payment.id}/cash`, { method: "POST", body: { tendered: cash } });
       setChangeDue(round2(cash - due));
       setSale({ ...sale, payment: p });
-      toast.success("Sale completed");
+      toast.success(t("pos.saleCompletedToast"));
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(tError((err as Error).message));
     } finally {
       setBusy(false);
     }
@@ -132,9 +132,9 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
     try {
       await api("/api/admin/pos/cancel", { method: "POST", body: { orderId: sale.order.id } });
       setSale(null);
-      toast.info("POS sale cancelled; stock released");
+      toast.info(t("pos.saleCancelledToast"));
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(tError((err as Error).message));
     } finally {
       setBusy(false);
     }
@@ -153,30 +153,31 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
   }
 
   const methodIcons = { CASH: Banknote, KHQR: QrCode, USDT: Wallet, PAYPAL: CreditCard };
+  const methodShortLabel = (code: MethodDto["code"]) => (code === "CASH" ? tryT("catalogData.paymentMethods.CASH", code) : code);
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_400px]">
+    <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
       {/* Left: Scanner & Product Grid */}
-      <div className="space-y-4">
+      <div className="min-w-0 space-y-4">
         <form onSubmit={onScanSubmit} className="flex gap-2 rounded-2xl border bg-white p-3 shadow-sm">
           <div className="relative flex-1">
             <Barcode className="absolute left-3 top-2.5 size-4 text-primary" />
-            <Input ref={scanRef} value={scan} onChange={(e) => setScan(e.target.value)} placeholder={km ? "ស្កេនបាកូដ SKU ឬស្វែងរកឈ្មោះថ្នាំ…" : "Scan barcode / SKU (Enter to add) or search medicine…"} className="pl-9" />
+            <Input ref={scanRef} value={scan} onChange={(e) => setScan(e.target.value)} placeholder={t("pos.scanPlaceholder")} className="pl-9" />
           </div>
-          <Button type="submit" variant="secondary"><Search className="size-4" /> {km ? "ស្វែងរក" : "Lookup"}</Button>
-          {scan && <Button type="button" variant="ghost" onClick={() => { setScan(""); setProducts(initialProducts); }}>Reset</Button>}
+          <Button type="submit" variant="secondary"><Search className="size-4" /> {t("pos.lookup")}</Button>
+          {scan && <Button type="button" variant="ghost" onClick={() => { setScan(""); setProducts(initialProducts); }}>{t("common.reset")}</Button>}
         </form>
 
         <div className="flex gap-1.5 overflow-x-auto pb-1">
-          <Button size="sm" variant={cat === "" ? "default" : "outline"} className="rounded-full shrink-0" onClick={() => setCat("")}>{km ? "ទាំងអស់" : "All"}</Button>
+          <Button size="sm" variant={cat === "" ? "default" : "outline"} className="rounded-full shrink-0" onClick={() => setCat("")}>{t("common.all")}</Button>
           {categories.map((c) => (
             <Button key={c.slug} size="sm" variant={cat === c.slug ? "default" : "outline"} className="rounded-full shrink-0" onClick={() => setCat(c.slug)}>
-              {km ? c.nameKm : c.nameEn}
+              {catName(c)}
             </Button>
           ))}
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
+        <div className="grid min-w-0 grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
           {visibleProducts.map((p) => {
             const out = p.available <= 0;
             return (
@@ -188,14 +189,14 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
                 className="flex flex-col overflow-hidden rounded-xl border bg-white text-left shadow-xs transition hover:border-primary disabled:opacity-45"
               >
                 <div className="relative">
-                  <ProductImage src={p.imageUrl} alt={p.nameEn} className="aspect-[4/3] w-full" sizes="180px" />
+                  <ProductImage src={p.imageUrl} alt={km ? p.nameKm : p.nameEn} className="aspect-[4/3] w-full" sizes="180px" />
                   {p.requiresPrescription && <Badge className="absolute left-1.5 top-1.5 bg-amber-500 text-[10px] text-white">Rx</Badge>}
                 </div>
                 <div className="flex flex-1 flex-col p-2.5">
                   <div className="line-clamp-2 text-xs font-semibold leading-snug">{km ? p.nameKm : p.nameEn}</div>
                   <div className="mt-auto flex items-baseline justify-between pt-2">
                     <span className="text-sm font-bold text-primary">${p.price.toFixed(2)}</span>
-                    <span className="text-[10px] text-muted-foreground">{p.available} in stock</span>
+                    <span className="text-[10px] text-muted-foreground">{t("pos.inStockCount", { n: p.available })}</span>
                   </div>
                 </div>
               </button>
@@ -205,21 +206,21 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
       </div>
 
       {/* Right: POS Cart & Payment */}
-      <div className="flex h-fit flex-col space-y-4 rounded-2xl border bg-white p-4 shadow-sm lg:sticky lg:top-20">
+      <div className="flex h-fit min-w-0 flex-col space-y-4 rounded-2xl border bg-white p-4 shadow-sm lg:sticky lg:top-20">
         <div className="flex items-center justify-between border-b pb-2.5">
-          <h2 className="font-bold">{km ? "កន្ត្រកលក់ POS" : "POS Counter Sale"}</h2>
-          {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs text-red-600 hover:underline">Clear</button>}
+          <h2 className="font-bold">{t("pos.counterSale")}</h2>
+          {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs text-red-600 hover:underline">{t("common.clear")}</button>}
         </div>
 
         {!canDispenseRx && (
           <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-2 text-[11px] text-amber-900">
-            <AlertTriangle className="size-3.5 shrink-0" /> OTC items only (Pharmacist login required for Rx).
+            <AlertTriangle className="size-3.5 shrink-0" /> {t("pos.otcOnlyNotice")}
           </div>
         )}
 
         <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
           {cart.length === 0 ? (
-            <div className="py-10 text-center text-xs text-muted-foreground">Scan a barcode or tap a medicine to add</div>
+            <div className="py-10 text-center text-xs text-muted-foreground">{t("pos.emptyHint")}</div>
           ) : (
             cart.map((l) => (
               <div key={l.id} className="flex items-center gap-2 rounded-xl border p-2 text-xs">
@@ -239,14 +240,14 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
         </div>
 
         <div className="grid grid-cols-2 gap-2 border-t pt-3">
-          <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Customer name (opt.)" className="h-8 text-xs" />
-          <Input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Phone +855 (opt.)" className="h-8 text-xs" />
-          <Input value={discountCode} onChange={(e) => setDiscountCode(e.target.value.toUpperCase())} placeholder="Promo code" className="h-8 text-xs uppercase" />
-          {canManualDiscount && <Input type="number" min={0} step="0.01" value={manualDiscount} onChange={(e) => setManualDiscount(e.target.value)} placeholder="Manual disc. ($)" className="h-8 text-xs" />}
+          <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder={t("pos.customerNamePh")} className="h-8 text-xs" />
+          <Input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder={t("pos.phonePh")} className="h-8 text-xs" />
+          <Input value={discountCode} onChange={(e) => setDiscountCode(e.target.value.toUpperCase())} placeholder={t("pos.promoCodePh")} className="h-8 text-xs uppercase" />
+          {canManualDiscount && <Input type="number" min={0} step="0.01" value={manualDiscount} onChange={(e) => setManualDiscount(e.target.value)} placeholder={t("pos.manualDiscPh")} className="h-8 text-xs" />}
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs">Payment Method</Label>
+          <Label className="text-xs">{t("pos.paymentMethod")}</Label>
           <div className="grid grid-cols-4 gap-1.5">
             {methods.map((m) => {
               const Icon = methodIcons[m.code];
@@ -263,7 +264,7 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
                   )}
                 >
                   <Icon className="size-4" />
-                  {m.code}
+                  <span className="truncate max-w-full">{methodShortLabel(m.code)}</span>
                 </button>
               );
             })}
@@ -285,10 +286,10 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
         </div>
 
         <div className="space-y-1 rounded-xl bg-muted/60 p-3 text-sm">
-          <div className="flex justify-between text-xs text-muted-foreground"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-          {manDisc > 0 && <div className="flex justify-between text-xs text-primary"><span>Manual discount</span><span>−${manDisc.toFixed(2)}</span></div>}
+          <div className="flex justify-between text-xs text-muted-foreground"><span>{t("pos.subtotal")}</span><span>${subtotal.toFixed(2)}</span></div>
+          {manDisc > 0 && <div className="flex justify-between text-xs text-primary"><span>{t("pos.manualDiscount")}</span><span>−${manDisc.toFixed(2)}</span></div>}
           <div className="flex items-baseline justify-between border-t pt-1.5">
-            <span className="font-bold">Total</span>
+            <span className="font-bold">{t("pos.total")}</span>
             <div className="text-right">
               <div className="text-xl font-extrabold text-primary">${estTotal.toFixed(2)}</div>
               <div className="text-xs text-muted-foreground">≈ {formatKHR(usdToKhr(estTotal, exchangeRate))}</div>
@@ -297,7 +298,7 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
         </div>
 
         <Button size="lg" className="w-full rounded-xl" disabled={!cart.length || busy} onClick={startCheckout}>
-          {busy && <Loader2 className="animate-spin" />} Charge ${estTotal.toFixed(2)} ({method})
+          {busy && <Loader2 className="animate-spin" />} {t("pos.chargeBtn", { amount: estTotal.toFixed(2), method: methodShortLabel(method) })}
         </Button>
       </div>
 
@@ -306,7 +307,7 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
-              <span>POS Sale {sale?.order.number}</span>
+              <span>{t("pos.posSaleTitle", { number: sale?.order.number ?? "" })}</span>
               <span className="font-mono text-primary">${sale ? Number(sale.order.total).toFixed(2) : "0.00"}</span>
             </DialogTitle>
           </DialogHeader>
@@ -314,28 +315,28 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
           {sale && sale.payment.status === "PAID" ? (
             <div className="space-y-4 py-2 text-center">
               <CheckCircle2 className="mx-auto size-14 text-emerald-600" />
-              <div className="text-xl font-bold text-emerald-800">Payment Verified & Stock Deducted</div>
+              <div className="text-xl font-bold text-emerald-800">{t("pos.paymentVerified")}</div>
               {changeDue !== null && changeDue > 0 && (
                 <div className="rounded-xl bg-secondary p-3">
-                  <div className="text-xs text-muted-foreground">Change Due</div>
+                  <div className="text-xs text-muted-foreground">{t("pos.changeDue")}</div>
                   <div className="text-2xl font-extrabold text-primary">${changeDue.toFixed(2)}</div>
                   <div className="text-xs text-muted-foreground">≈ {formatKHR(usdToKhr(changeDue, sale.order.exchangeRate))}</div>
                 </div>
               )}
               <div className="flex justify-center gap-2 pt-2">
-                <Button asChild variant="outline"><a href={`/invoice/${encodeURIComponent(sale.order.id)}?format=receipt`} target="_blank" rel="noopener noreferrer"><Printer /> Print Receipt</a></Button>
-                <Button onClick={finishAndReset}>New Sale</Button>
+                <Button asChild variant="outline"><a href={`/invoice/${encodeURIComponent(sale.order.id)}?format=receipt`} target="_blank" rel="noopener noreferrer"><Printer /> {t("pos.printReceipt")}</a></Button>
+                <Button onClick={finishAndReset}>{t("pos.newSale")}</Button>
               </div>
             </div>
           ) : sale && sale.payment.method === "CASH" ? (
             <div className="space-y-4">
               <div className="rounded-xl bg-accent p-3 text-center">
-                <div className="text-xs text-accent-foreground">Amount Due</div>
+                <div className="text-xs text-accent-foreground">{t("pos.amountDue")}</div>
                 <div className="text-2xl font-extrabold">${Number(sale.order.total).toFixed(2)}</div>
                 <div className="text-xs text-muted-foreground">{formatKHR(usdToKhr(sale.order.total, sale.order.exchangeRate))}</div>
               </div>
               <div className="space-y-1.5">
-                <Label>Cash Tendered (USD)</Label>
+                <Label>{t("pos.cashTendered")}</Label>
                 <Input type="number" step="0.01" value={tendered} onChange={(e) => setTendered(e.target.value)} className="text-lg font-bold" />
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {[Number(sale.order.total), 5, 10, 20, 50, 100].filter((v, i, a) => v >= Number(sale.order.total) && a.indexOf(v) === i).map((v) => (
@@ -345,12 +346,12 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
               </div>
               {Number(tendered) >= Number(sale.order.total) && (
                 <div className="flex justify-between rounded-lg bg-secondary px-3 py-2 text-sm font-semibold">
-                  <span>Change:</span><span className="text-primary">${(Number(tendered) - Number(sale.order.total)).toFixed(2)}</span>
+                  <span>{t("pos.change")}</span><span className="text-primary">${(Number(tendered) - Number(sale.order.total)).toFixed(2)}</span>
                 </div>
               )}
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1 text-red-600" onClick={cancelActiveSale} disabled={busy}><XCircle /> Cancel</Button>
-                <Button className="flex-1" onClick={completeCash} disabled={busy}>{busy && <Loader2 className="animate-spin" />} Confirm Cash Paid</Button>
+                <Button variant="outline" className="flex-1 text-red-600" onClick={cancelActiveSale} disabled={busy}><XCircle /> {t("common.cancel")}</Button>
+                <Button className="flex-1" onClick={completeCash} disabled={busy}>{busy && <Loader2 className="animate-spin" />} {t("pos.confirmCashPaid")}</Button>
               </div>
             </div>
           ) : sale ? (
@@ -362,7 +363,7 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
                 hashUrl={`/api/payments/${sale.payment.id}/usdt-hash`}
                 onPaid={(p) => setSale((prev) => (prev ? { ...prev, payment: p } : null))}
               />
-              <Button variant="outline" className="w-full text-red-600" onClick={cancelActiveSale} disabled={busy}><XCircle /> Cancel Unpaid Sale</Button>
+              <Button variant="outline" className="w-full text-red-600" onClick={cancelActiveSale} disabled={busy}><XCircle /> {t("pos.cancelUnpaidSale")}</Button>
             </div>
           ) : null}
         </DialogContent>

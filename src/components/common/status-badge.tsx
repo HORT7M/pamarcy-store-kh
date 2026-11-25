@@ -32,11 +32,12 @@ const COLORS: Record<string, string> = {
 };
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {
-  const { t } = useI18n();
-  const label = t(`status.${status}` as never);
+  const { tryT } = useI18n();
+  const fallback = status.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+  const label = tryT(`status.${status}`, fallback);
   return (
     <Badge variant="outline" className={cn("font-medium whitespace-nowrap", COLORS[status] ?? "", className)}>
-      {label.startsWith("status.") ? status.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase()) : label}
+      {label}
     </Badge>
   );
 }

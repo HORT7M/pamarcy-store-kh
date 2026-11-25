@@ -4,7 +4,7 @@ import { ZodError, type ZodType } from "zod";
 import { Prisma } from "@prisma/client";
 import { ApiError, badRequest, payloadTooLarge, unsupportedMedia } from "./errors";
 import { rateLimit, rateLimitHeaders, type RateLimitResult } from "./rate-limit";
-import { runWithMutableCookies } from "./auth/session";
+import { runWithMutableCookies, SESSION_COOKIE } from "./auth/session";
 
 type Ctx<P> = { params: Promise<P> };
 type Handler<P> = (req: NextRequest, ctx: Ctx<P>) => Promise<Response | unknown>;
@@ -46,15 +46,19 @@ function sanitizeIp(raw: string | null | undefined): string | null {
   return SAFE_IP_RE.test(ip) ? ip.toLowerCase() : null;
 }
 
-export function clientIp(req: NextRequest | Request): string {
+export function clientIpFromHeaders(h: { get(name: string): string | null }): string {
   if (process.env.TRUST_PROXY === "false") return "local";
-  const cf = sanitizeIp(req.headers.get("cf-connecting-ip"));
+  const cf = sanitizeIp(h.get("cf-connecting-ip"));
   if (cf) return cf;
-  const xff = sanitizeIp(req.headers.get("x-forwarded-for")?.split(",")[0]);
+  const xff = sanitizeIp(h.get("x-forwarded-for")?.split(",")[0]);
   if (xff) return xff;
-  const real = sanitizeIp(req.headers.get("x-real-ip"));
+  const real = sanitizeIp(h.get("x-real-ip"));
   if (real) return real;
   return "local";
+}
+
+export function clientIp(req: NextRequest | Request): string {
+  return clientIpFromHeaders(req.headers);
 }
 
 function isSensitiveApiPath(pathname: string): boolean {
@@ -83,13 +87,17 @@ function withCachePolicy(req: NextRequest, res: Response): Response {
 function checkSameOrigin(req: NextRequest) {
   const method = req.method.toUpperCase();
   if (["GET", "HEAD", "OPTIONS"].includes(method)) return;
-  const site = req.headers.get("sec-fetch-site");
+  const site = req.headers.get("sec-fetch-site")?.trim().toLowerCase() ?? null;
   if (site && site !== "same-origin" && site !== "none") throw new ApiError(403, "CSRF", "Cross-site request blocked");
-  const host = req.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ?? req.headers.get("host");
+  const forwardedHost = process.env.TRUST_PROXY === "false" ? null : req.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwardedHost || req.headers.get("host");
   const origin = req.headers.get("origin");
   if (origin) {
     try {
-      if (new URL(origin).host !== host) throw new ApiError(403, "CSRF", "Cross-origin request blocked");
+      const u = new URL(origin);
+      if ((u.protocol !== "http:" && u.protocol !== "https:") || u.host !== host) {
+        throw new ApiError(403, "CSRF", "Cross-origin request blocked");
+      }
     } catch (e) {
       if (e instanceof ApiError) throw e;
       throw new ApiError(403, "CSRF", "Invalid origin");
@@ -99,11 +107,19 @@ function checkSameOrigin(req: NextRequest) {
   const referer = req.headers.get("referer");
   if (referer) {
     try {
-      if (new URL(referer).host !== host) throw new ApiError(403, "CSRF", "Cross-origin referer blocked");
+      const u = new URL(referer);
+      if ((u.protocol !== "http:" && u.protocol !== "https:") || u.host !== host) {
+        throw new ApiError(403, "CSRF", "Cross-origin referer blocked");
+      }
     } catch (e) {
       if (e instanceof ApiError) throw e;
       throw new ApiError(403, "CSRF", "Invalid referer");
     }
+    return;
+  }
+  // Authenticated mutating requests carrying a session cookie must prove same-origin via Origin, Referer, or Sec-Fetch-Site: same-origin
+  if (req.cookies.has(SESSION_COOKIE) && site !== "same-origin") {
+    throw new ApiError(403, "CSRF", "Missing same-origin header on authenticated request");
   }
 }
 
@@ -162,7 +178,7 @@ export function apiHandler<P = Record<string, string>>(fn: Handler<P>, opts: Han
 const CLIENT_SAFE_5XX = new Set(["USDT_BUSY"]);
 
 /** Friendly names for unique-constraint columns (never expose raw schema / index names). */
-const FIELD_LABELS: Record<string, string> = { email: "email", phone: "phone number", sku: "SKU", barcode: "barcode", slug: "slug", code: "code", number: "number", name: "name" };
+const FIELD_LABELS: Record<string, string> = { email: "email", emailHash: "email", phone: "phone number", phoneHash: "phone number", sku: "SKU", barcode: "barcode", slug: "slug", code: "code", number: "number", name: "name" };
 
 export function errorResponse(e: unknown) {
   // Server-side failures (upstream provider errors, misconfiguration, env var names…) are logged, never returned.

@@ -25,7 +25,8 @@ export const POST = apiHandler(
   async (req) => {
     const ip = clientIp(req);
     const rl = enforceRegisterIpLimit(ip);
-    const { _bot, ...body } = await parseBody(req, schema);
+    const { name, email, phone, password, _bot } = await parseBody(req, schema);
+    const body = { name, email, phone, password };
 
     // Verify human / bot protection BEFORE querying DB or hashing password
     await verifyBotProtection(req, {

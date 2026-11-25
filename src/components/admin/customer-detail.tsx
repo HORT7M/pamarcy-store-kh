@@ -23,7 +23,7 @@ type Detail = {
 };
 
 export function CustomerDetailClient({ id, canWrite }: { id: string; canWrite: boolean }) {
-  const { money } = useI18n();
+  const { money, t, tError } = useI18n();
   const [c, setC] = useState<Detail | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "", notes: "" });
   const [busy, setBusy] = useState(false);
@@ -43,60 +43,61 @@ export function CustomerDetailClient({ id, canWrite }: { id: string; canWrite: b
     setBusy(true);
     try {
       await api(`/api/admin/customers/${id}`, { method: "PATCH", body: { name: form.name, email: form.email, ...(form.phone ? { phone: form.phone } : {}), notes: form.notes } });
-      toast.success("Customer updated"); load();
-    } catch (err) { toast.error((err as Error).message); }
+      toast.success(t("customersAdmin.customerUpdatedToast")); load();
+    } catch (err) { toast.error(tError((err as Error).message)); }
     finally { setBusy(false); }
   }
 
   async function toggleStatus() {
     if (!c) return;
     const next = c.user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
-    if (!confirm(`${next === "SUSPENDED" ? "Suspend" : "Reactivate"} ${c.user.name}?`)) return;
+    const msg = next === "SUSPENDED" ? t("customersAdmin.confirmSuspend", { name: c.user.name }) : t("customersAdmin.confirmReactivate", { name: c.user.name });
+    if (!confirm(msg)) return;
     setBusy(true);
     try {
       await api(`/api/admin/customers/${id}`, { method: "PATCH", body: { status: next } });
-      toast.success(`Account ${next.toLowerCase()}`); load();
-    } catch (err) { toast.error((err as Error).message); }
+      toast.success(next === "SUSPENDED" ? t("customersAdmin.accountSuspendedToast") : t("customersAdmin.accountActivatedToast")); load();
+    } catch (err) { toast.error(tError((err as Error).message)); }
     finally { setBusy(false); }
   }
 
   return (
     <div className="space-y-5">
-      <Link href="/admin/customers" className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"><ArrowLeft className="size-4" /> Back to customers</Link>
+      <Link href="/admin/customers" className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"><ArrowLeft className="size-4" /> {t("customersAdmin.backToCustomers")}</Link>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">{c.user.name}</h1>
           <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Joined {formatDate(c.user.createdAt)}</span> · <span>Last login {formatDateTime(c.user.lastLoginAt)}</span>
+            <span>{t("customersAdmin.joinedPrefix", { date: formatDate(c.user.createdAt) })}</span> · <span>{t("customersAdmin.lastLoginPrefix", { date: formatDateTime(c.user.lastLoginAt) })}</span>
             <StatusBadge status={c.user.status} />
           </div>
         </div>
         {canWrite && (
           <Button variant={c.user.status === "ACTIVE" ? "destructive" : "default"} onClick={toggleStatus} disabled={busy}>
-            {c.user.status === "ACTIVE" ? <><Ban /> Suspend Account</> : <><CheckCircle2 /> Reactivate Account</>}
+            {c.user.status === "ACTIVE" ? <><Ban /> {t("customersAdmin.suspendAccount")}</> : <><CheckCircle2 /> {t("customersAdmin.reactivateAccount")}</>}
           </Button>
         )}
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3">
         <form onSubmit={save} className="space-y-3 rounded-2xl border bg-white p-5 shadow-sm">
-          <h2 className="font-semibold">Customer Details</h2>
-          <div className="space-y-1"><Label>Full name</Label><Input disabled={!canWrite} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-          <div className="space-y-1"><Label>Email</Label><Input type="email" disabled={!canWrite} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-          <div className="space-y-1"><Label>Phone (+855)</Label><Input disabled={!canWrite} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-          <div className="space-y-1"><Label>Internal pharmacy notes</Label><Textarea rows={3} disabled={!canWrite} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-          {canWrite && <Button type="submit" disabled={busy}>{busy && <Loader2 className="animate-spin" />} Save Changes</Button>}
+          <h2 className="font-semibold">{t("customersAdmin.customerDetails")}</h2>
+          <div className="space-y-1"><Label>{t("checkout.fullName")}</Label><Input disabled={!canWrite} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div className="space-y-1"><Label>{t("common.email")}</Label><Input type="email" disabled={!canWrite} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+          <div className="space-y-1"><Label>{t("checkout.phone")}</Label><Input disabled={!canWrite} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+          <div className="space-y-1"><Label>{t("customersAdmin.internalNotes")}</Label><Textarea rows={3} disabled={!canWrite} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+          {canWrite && <Button type="submit" disabled={busy}>{busy && <Loader2 className="animate-spin" />} {t("customersAdmin.saveChanges")}</Button>}
         </form>
 
         <div className="space-y-5 lg:col-span-2">
           <section className="rounded-2xl border bg-white p-5 shadow-sm">
-            <h2 className="mb-3 font-semibold">Purchase History ({c.topItems.length} top medicines)</h2>
-            {c.topItems.length === 0 ? <p className="text-sm text-muted-foreground">No paid purchases yet.</p> : (
+            <h2 className="mb-3 font-semibold">{t("customersAdmin.purchaseHistory", { n: c.topItems.length })}</h2>
+            {c.topItems.length === 0 ? <p className="text-sm text-muted-foreground">{t("customersAdmin.noPaidPurchases")}</p> : (
               <div className="grid gap-2 sm:grid-cols-2">
-                {c.topItems.map((t) => (
-                  <div key={t.medicineId} className="flex items-center justify-between rounded-xl border p-2.5 text-xs">
-                    <span className="truncate font-medium">{t.nameEn}</span>
-                    <span className="shrink-0 font-semibold">{t._sum.quantity} pcs · {money(t._sum.lineTotal ?? 0)}</span>
+                {c.topItems.map((it) => (
+                  <div key={it.medicineId} className="flex items-center justify-between rounded-xl border p-2.5 text-xs">
+                    <span className="truncate font-medium">{it.nameEn}</span>
+                    <span className="shrink-0 font-semibold">{it._sum.quantity} {t("customersAdmin.pcsShort")} · {money(it._sum.lineTotal ?? 0)}</span>
                   </div>
                 ))}
               </div>
@@ -104,7 +105,7 @@ export function CustomerDetailClient({ id, canWrite }: { id: string; canWrite: b
           </section>
 
           <section className="rounded-2xl border bg-white p-5 shadow-sm">
-            <h2 className="mb-3 font-semibold">Saved Addresses ({c.addresses.length})</h2>
+            <h2 className="mb-3 font-semibold">{t("customersAdmin.savedAddresses", { n: c.addresses.length })}</h2>
             <div className="grid gap-2 sm:grid-cols-2 text-xs">
               {c.addresses.map((a) => (
                 <div key={a.id} className="rounded-xl border p-3">
@@ -116,9 +117,17 @@ export function CustomerDetailClient({ id, canWrite }: { id: string; canWrite: b
           </section>
 
           <section className="rounded-2xl border bg-white p-5 shadow-sm">
-            <h2 className="mb-3 font-semibold">Orders ({c.orders.length})</h2>
+            <h2 className="mb-3 font-semibold">{t("customersAdmin.ordersCount", { n: c.orders.length })}</h2>
             <table className="w-full text-sm">
-              <thead className="border-b text-left text-xs text-muted-foreground"><tr><th className="py-2">Order #</th><th className="py-2">Date</th><th className="py-2">Status</th><th className="py-2">Payment</th><th className="py-2 text-right">Total</th></tr></thead>
+              <thead className="border-b text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="py-2">{t("ordersAdmin.colOrderNo")}</th>
+                  <th className="py-2">{t("common.date")}</th>
+                  <th className="py-2">{t("common.status")}</th>
+                  <th className="py-2">{t("ordersAdmin.colPayment")}</th>
+                  <th className="py-2 text-right">{t("common.total")}</th>
+                </tr>
+              </thead>
               <tbody className="divide-y">
                 {c.orders.map((o) => (
                   <tr key={o.id}>

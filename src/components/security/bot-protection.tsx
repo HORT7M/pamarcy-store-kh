@@ -414,7 +414,7 @@ export function useBotProtection(
  * - Displays an accessible, bilingual SVG math / text challenge or Turnstile/hCaptcha when needed.
  */
 export function BotProtectionWidget({ bot, compact }: { bot: BotProtectionController; compact?: boolean }) {
-  const { t, locale } = useI18n();
+  const { t, bcp47 } = useI18n();
   const { challenge, loading, solving, ready, visible, answer, setAnswer, fallbackUsed, refresh, externalContainerRef } = bot;
 
   if (!visible && !loading) return null;
@@ -424,7 +424,7 @@ export function BotProtectionWidget({ bot, compact }: { bot: BotProtectionContro
     try {
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = locale === "km" ? "km-KH" : "en-US";
+      utter.lang = bcp47;
       window.speechSynthesis.speak(utter);
     } catch {
       /* speechSynthesis optional */

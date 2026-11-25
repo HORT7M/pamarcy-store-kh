@@ -111,7 +111,11 @@ No payment method ever simulates or fakes payment success. Orders are marked `PA
 | `npm run db:migrate` | Apply Prisma migrations in development |
 | `npm run db:deploy` | Apply Prisma migrations in production |
 | `npm run db:seed` | Seed roles, catalogue, batches, and historical POS sales |
-| `npm run db:backup` | Create a compressed backup in `./backups` (`pg_dump` or portable JSON.gz) |
+| `npm run db:encrypt` | Encrypt existing plaintext PII/PHI rows, blind indexes & prescription files at rest |
+| `npm run db:encrypt:verify` | Verify zero unencrypted sensitive rows or prescription files remain on disk |
+| `npm run db:encrypt:rotate` | Re-encrypt rows & files from retired `DATA_ENCRYPTION_KEYRING` keys to the active key |
+| `npm run db:backup` | Create an AES-256-GCM encrypted compressed backup in `./backups` (`.enc`, mode `0600`) |
+| `npm run db:backup:verify` | Authenticate & verify an encrypted backup archive without writing plaintext |
 | `npm run cron` | Trigger `/api/cron/maintenance` (sweeps open payments, expires stale reservations, creates expiry notifications) |
 | `npm run images:fetch` | Re-download real Wikimedia Commons photos & update `public/images/CREDITS.json` |
 
@@ -120,6 +124,15 @@ No payment method ever simulates or fakes payment success. Orders are marked `PA
 ## 6. Deployment (Vercel / Node)
 
 1. Provision a managed PostgreSQL database (Neon, Supabase, RDS, Railway) and Cloudinary account.
-2. Set all required environment variables from `.env.example` in your hosting dashboard (`DATABASE_URL`, `AUTH_SECRET`, `CRON_SECRET`, `APP_URL`, Cloudinary & payment credentials).
+2. Set all required environment variables from `.env.example` in your hosting dashboard (`DATABASE_URL` with `?sslmode=verify-full` or `?sslmode=require`, `AUTH_SECRET`, `CRON_SECRET`, `DATA_ENCRYPTION_KEY`, `DATA_ENCRYPTION_KEY_ID`, `BACKUP_ENCRYPTION_KEY`, `APP_URL` with `https://`, `ENFORCE_HTTPS=true`, Cloudinary & payment credentials).
 3. Set build command to `npm run db:deploy && npm run build`.
 4. `vercel.json` automatically schedules `/api/cron/maintenance` every 5 minutes (authenticated via `CRON_SECRET`).
+
+---
+
+## 7. Data Protection & Encryption Architecture
+
+- **At Rest (Database PII/PHI & Confidential Records)**: Transparent Prisma Client extension (`src/lib/db-encryption.ts`) encrypts personal information, patient health records, payment payer/gateway metadata, supplier tax records, and session/audit metadata using **AES-256-GCM** with random 96-bit IVs, 128-bit authentication tags, and column-bound AAD (`Model:field`). Exact lookups on encrypted `User.email`, `User.phone`, and `Order.phone`/`email` use HKDF-separated **HMAC-SHA256 blind indexes**.
+- **At Rest (Private Prescriptions & Backups)**: Prescription uploads are AES-256-GCM encrypted (`PMRYENC1`, filename-bound AAD) before storage on local disk (`storage/prescriptions/`, mode `0600`) or authenticated Cloudinary raw storage. Database backups are compressed and AES-256-GCM encrypted (`PMRYBAK1`) using a separate `BACKUP_ENCRYPTION_KEY`.
+- **In Transit**: Production Edge middleware enforces HTTP → HTTPS `308` permanent redirects with HSTS (`max-age=63072000; includeSubDomains`); PostgreSQL connections enforce `sslmode=require|verify-ca|verify-full` in production; SMTP enforces TLSv1.2+ / mandatory STARTTLS (`requireTLS: true`, `rejectUnauthorized: true`); and all external payment/blockchain RPC endpoints require `https://`.
+- **Key Management & Rotation**: All encryption keys are strictly environment-driven (`DATA_ENCRYPTION_KEY`, `DATA_ENCRYPTION_KEY_ID`, `DATA_ENCRYPTION_KEYRING`, `BACKUP_ENCRYPTION_KEY`) and validated against weak/placeholder values. To rotate keys with zero downtime: move the previous key into `DATA_ENCRYPTION_KEYRING="v1:<old_key>"`, set a new `DATA_ENCRYPTION_KEY` and `DATA_ENCRYPTION_KEY_ID="v2"`, run `npm run db:encrypt:rotate`, verify with `npm run db:encrypt:verify`, then remove the retired key from `DATA_ENCRYPTION_KEYRING`.

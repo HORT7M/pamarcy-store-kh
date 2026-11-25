@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { apiHandler, clientIp, parseBody, parseParams, parseQuery } from "@/lib/api";
 import { idParamSchema, onlineInitiatePaymentSchema, orderTokenQuerySchema } from "@/lib/validators";
-import { assertOrderAccess } from "@/lib/order-access";
+import { ONLINE_PAYMENT_INITIATE_FIELDS, pickAllowed } from "@/lib/allowlist";
+import { assertOnlineOrderPayAccess, resolveOrderToken } from "@/lib/order-access";
 import { initiatePayment, paymentView } from "@/lib/services/payments";
 import { tooManyRequests } from "@/lib/errors";
 import { rateLimitHeaders, rateLimitMulti } from "@/lib/rate-limit";
@@ -24,9 +25,10 @@ export const POST = apiHandler<{ id: string }>(
       );
     }
 
-    const { user } = await assertOrderAccess(id, token);
+    const { user } = await assertOnlineOrderPayAccess(id, resolveOrderToken(req, token));
     const body = await parseBody(req, onlineInitiatePaymentSchema);
-    const p = await initiatePayment(id, { ...body, channel: "online" }, user?.id ?? null);
+    const payOpts = pickAllowed(body, ONLINE_PAYMENT_INITIATE_FIELDS);
+    const p = await initiatePayment(id, { ...payOpts, channel: "online" }, user?.id ?? null);
     return NextResponse.json(await paymentView(p), { headers: rateLimitHeaders(rl) });
   },
   { rateLimit: false },

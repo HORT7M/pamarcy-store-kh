@@ -2,6 +2,7 @@ import { apiHandler, parseBody, parseParams } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { requireStaff } from "@/lib/auth/session";
 import { categorySchema, idParamSchema } from "@/lib/validators";
+import { CATEGORY_WRITE_FIELDS, pickAllowed } from "@/lib/allowlist";
 import { audit } from "@/lib/audit";
 import { conflict, notFound } from "@/lib/errors";
 
@@ -11,7 +12,11 @@ export const PUT = apiHandler<{ id: string }>(async (req, { params }) => {
   const existing = await prisma.category.findFirst({ where: { id, deletedAt: null }, select: { id: true } });
   if (!existing) throw notFound("Category not found");
   const body = await parseBody(req, categorySchema);
-  const c = await prisma.category.update({ where: { id }, data: body });
+  const allowed = pickAllowed(body, CATEGORY_WRITE_FIELDS);
+  const c = await prisma.category.update({
+    where: { id },
+    data: { ...allowed, ...(body.slug !== undefined ? { slug: body.slug } : {}) },
+  });
   await audit(user.id, "category.update", "Category", id);
   return c;
 });

@@ -58,3 +58,8 @@ next-env.d.ts
 /storage
 /backups
 backups/
+
+# temporary local scripts
+*.tmp.mjs
+*.tmp.ts
+*.tmp.js

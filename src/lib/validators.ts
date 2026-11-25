@@ -374,7 +374,7 @@ export const profileSchema = z
   .object({
     name: trimmed(100).min(2, "Name is required"),
     phone: khPhone,
-    locale: z.enum(["km", "en"]).optional(),
+    locale: z.enum(["km", "en", "vi", "zh-CN", "fr"]).optional(),
   })
   .strict();
 
@@ -590,6 +590,13 @@ export const medicineSchema = z
   })
   .strict();
 
+/** Update schema forbids setting opening stock on an existing medicine (null/omitted only). */
+export const medicineUpdateSchema = medicineSchema
+  .extend({
+    initialStock: z.null().optional(),
+  })
+  .strict();
+
 export const categorySchema = z
   .object({
     nameEn: trimmed(100).min(2, "English name is required"),
@@ -658,6 +665,12 @@ export const adjustSchema = z
   .superRefine((d, ctx) => {
     if (d.mode === "out" && d.quantity < 1) {
       ctx.addIssue({ code: "custom", message: "Quantity to remove must be at least 1", path: ["quantity"] });
+    }
+    if ((d.type === "STOCK_OUT" || d.type === "EXPIRED_WRITE_OFF") && d.mode !== "out") {
+      ctx.addIssue({ code: "custom", message: "Stock out and expired write-off require mode \"out\"", path: ["type"] });
+    }
+    if (d.type === "ADJUSTMENT" && d.mode !== "set") {
+      ctx.addIssue({ code: "custom", message: "Cycle count adjustment requires mode \"set\"", path: ["type"] });
     }
   });
 
@@ -851,7 +864,8 @@ export const customerUpdateSchema = z
       .nullable()
       .optional(),
   })
-  .strict();
+  .strict()
+  .refine((d) => Object.values(d).some((v) => v !== undefined), "Provide at least one field to update");
 
 export const staffSchema = z
   .object({
@@ -863,6 +877,14 @@ export const staffSchema = z
     licenseNo: optStr(100),
     password: password.optional(),
     status: z.enum(["ACTIVE", "SUSPENDED"]).optional(),
+  })
+  .strict();
+
+/** Staff creation requires a password and never creates suspended accounts via parameter tampering. */
+export const staffCreateSchema = staffSchema
+  .extend({
+    password,
+    status: z.literal("ACTIVE").optional(),
   })
   .strict();
 

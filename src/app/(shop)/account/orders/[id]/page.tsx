@@ -2,9 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { ENTITY_ID_RE } from "@/lib/validators";
-import { requireCustomer } from "@/lib/auth/session";
+import { requireCustomerPage } from "@/lib/auth/guards";
 import { getT } from "@/lib/i18n/server";
-import { orderAccessToken } from "@/lib/order-access";
 import { OrderDetailClient } from "@/components/shop/order-detail-client";
 
 export const dynamic = "force-dynamic";
@@ -12,17 +11,16 @@ export const dynamic = "force-dynamic";
 export default async function OrderDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!ENTITY_ID_RE.test(id)) notFound();
-  const user = await requireCustomer();
+  const user = await requireCustomerPage();
   const { t } = await getT();
-  const o = await prisma.order.findUnique({ where: { id }, include: { items: true, statusHistory: { orderBy: { createdAt: "asc" } }, payments: { orderBy: { createdAt: "desc" }, include: { method: true } } } });
-  if (!o || o.customerId !== user.customerId) notFound();
+  const o = await prisma.order.findFirst({ where: { id, customerId: user.customerId }, include: { items: true, statusHistory: { orderBy: { createdAt: "asc" } }, payments: { orderBy: { createdAt: "desc" }, include: { method: true } } } });
+  if (!o) notFound();
   return (
     <div className="space-y-4">
       <Link href="/account/orders" className="text-sm text-primary hover:underline">← {t("account.orders")}</Link>
       <OrderDetailClient
-        token={orderAccessToken(o.id)}
         order={{
-          id: o.id, number: o.number, status: o.status, paymentStatus: o.paymentStatus, fulfillmentStatus: o.fulfillmentStatus, prescriptionStatus: o.prescriptionStatus, prescriptionNote: o.prescriptionNote,
+          id: o.id, number: o.number, channel: o.channel, status: o.status, paymentStatus: o.paymentStatus, fulfillmentStatus: o.fulfillmentStatus, prescriptionStatus: o.prescriptionStatus, prescriptionNote: o.prescriptionNote,
           createdAt: o.createdAt.toISOString(), subtotal: o.subtotal.toString(), discountAmount: o.discountAmount.toString(), deliveryFee: o.deliveryFee.toString(), total: o.total.toString(),
           fullName: o.fullName, phone: o.phone, address: [o.street, o.village, o.commune, o.district, o.province].filter(Boolean).join(", "), instructions: o.instructions, cancelReason: o.cancelReason,
           items: o.items.map((i) => ({ id: i.id, nameEn: i.nameEn, nameKm: i.nameKm, sku: i.sku, quantity: i.quantity, fulfilledQuantity: i.fulfilledQuantity, unitPrice: i.unitPrice.toString(), lineTotal: i.lineTotal.toString(), medicineId: i.medicineId })),

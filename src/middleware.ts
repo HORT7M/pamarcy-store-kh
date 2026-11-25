@@ -8,6 +8,8 @@ import {
   buildPageCsp,
   generateCspNonce,
   isHttpsRequest,
+  isIncomingRequestHttps,
+  isLoopbackRequestHost,
   isNoReferrerPath,
   isPrivateNoStorePath,
 } from "@/lib/security-headers";
@@ -70,9 +72,32 @@ export function middleware(req: NextRequest) {
   const rawSession = req.cookies.get(SESSION_COOKIE)?.value;
   const hasValidSessionFormat = typeof rawSession === "string" && SESSION_TOKEN_RE.test(rawSession);
   const isDev = process.env.NODE_ENV === "development";
+  const isIncomingHttps = isIncomingRequestHttps(req);
   const isHttps = isHttpsRequest(req);
   const enableHsts = process.env.NODE_ENV === "production" || isHttps;
   const referrerPolicy = isNoReferrerPath(pathname) ? "no-referrer" : undefined;
+
+  // Enforce encryption in transit: redirect plaintext HTTP to HTTPS in production or when ENFORCE_HTTPS=true
+  const enforceHttpsFlag = process.env.ENFORCE_HTTPS?.trim().toLowerCase();
+  const forceHttps = enforceHttpsFlag === "true" || enforceHttpsFlag === "1";
+  const allowInsecureHttp = process.env.ALLOW_INSECURE_HTTP?.trim().toLowerCase() === "true";
+  const mustRedirectToHttps =
+    !isIncomingHttps &&
+    !allowInsecureHttp &&
+    (forceHttps || (process.env.NODE_ENV === "production" && !isLoopbackRequestHost(req)));
+
+  if (mustRedirectToHttps) {
+    const httpsUrl = req.nextUrl.clone();
+    httpsUrl.protocol = "https:";
+    if (httpsUrl.port === "80") httpsUrl.port = "";
+    const redir = NextResponse.redirect(httpsUrl, 308);
+    return applySecurityHeaders(redir, {
+      csp: API_CSP,
+      isPrivate: isPrivateNoStorePath(pathname),
+      enableHsts: true,
+      referrerPolicy,
+    });
+  }
 
   if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login") && !hasValidSessionFormat) {
     const url = req.nextUrl.clone();
@@ -132,7 +157,7 @@ export function middleware(req: NextRequest) {
   const pageCsp = buildPageCsp({
     nonce,
     isDev,
-    upgradeInsecureRequests: !isDev && isHttps,
+    upgradeInsecureRequests: !isDev && (isIncomingHttps || (isHttps && !isLoopbackRequestHost(req))),
   });
 
   const requestHeaders = new Headers(req.headers);

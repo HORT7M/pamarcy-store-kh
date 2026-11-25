@@ -30,7 +30,7 @@ type SupplierHistory = Supplier & {
 const empty = { name: "", contactName: "", phone: "", email: "", province: "", district: "", address: "", taxId: "", notes: "" };
 
 export function SuppliersClient({ canWrite }: { canWrite: boolean }) {
-  const { money } = useI18n();
+  const { money, t, tError, locale } = useI18n();
   const [q, setQ] = useState("");
   const [items, setItems] = useState<Supplier[]>([]);
   const [modal, setModal] = useState<Supplier | "new" | null>(null);
@@ -53,17 +53,17 @@ export function SuppliersClient({ canWrite }: { canWrite: boolean }) {
     try {
       if (modal === "new") await api("/api/admin/suppliers", { method: "POST", body: form });
       else if (modal) await api(`/api/admin/suppliers/${modal.id}`, { method: "PUT", body: form });
-      toast.success("Supplier saved"); setModal(null); load();
-    } catch (err) { toast.error((err as Error).message); }
+      toast.success(t("suppliersAdmin.supplierSavedToast")); setModal(null); load();
+    } catch (err) { toast.error(tError((err as Error).message)); }
     finally { setBusy(false); }
   }
   async function remove(id: string) {
-    if (!confirm("Delete supplier?")) return;
-    try { await api(`/api/admin/suppliers/${id}`, { method: "DELETE" }); toast.success("Supplier deleted"); load(); }
-    catch (err) { toast.error((err as Error).message); }
+    if (!confirm(t("suppliersAdmin.confirmDelete"))) return;
+    try { await api(`/api/admin/suppliers/${id}`, { method: "DELETE" }); toast.success(t("suppliersAdmin.supplierDeletedToast")); load(); }
+    catch (err) { toast.error(tError((err as Error).message)); }
   }
   function openHistory(id: string) {
-    api<SupplierHistory>(`/api/admin/suppliers/${id}`).then(setHistory).catch((e) => toast.error(e.message));
+    api<SupplierHistory>(`/api/admin/suppliers/${id}`).then(setHistory).catch((e) => toast.error(tError(e.message)));
   }
 
   const prov = PROVINCES.find((p) => p.en === form.province);
@@ -72,29 +72,36 @@ export function SuppliersClient({ canWrite }: { canWrite: boolean }) {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Supplier Management"
-        subtitle="Manage pharmaceutical distributors, contact details and purchase history"
-        actions={canWrite && <Button onClick={() => openEdit()}><Plus /> Add Supplier</Button>}
+        title={t("suppliersAdmin.title")}
+        subtitle={t("suppliersAdmin.subtitle")}
+        actions={canWrite && <Button onClick={() => openEdit()}><Plus /> {t("suppliersAdmin.addSupplier")}</Button>}
       />
       <div className="rounded-2xl border bg-white p-3 shadow-sm">
-        <div className="relative max-w-md"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search supplier name, contact or phone…" className="pl-9" /></div>
+        <div className="relative max-w-md"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("suppliersAdmin.searchPh")} className="pl-9" /></div>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-            <tr><th className="p-3">Supplier</th><th className="p-3">Contact</th><th className="p-3">Location</th><th className="p-3 text-right">POs</th><th className="p-3 text-right">Total Purchased</th><th className="p-3 text-right">Actions</th></tr>
+            <tr>
+              <th className="p-3">{t("suppliersAdmin.colSupplier")}</th>
+              <th className="p-3">{t("suppliersAdmin.colContact")}</th>
+              <th className="p-3">{t("suppliersAdmin.colLocation")}</th>
+              <th className="p-3 text-right">{t("suppliersAdmin.colPos")}</th>
+              <th className="p-3 text-right">{t("suppliersAdmin.colTotalPurchased")}</th>
+              <th className="p-3 text-right">{t("common.actions")}</th>
+            </tr>
           </thead>
           <tbody className="divide-y">
             {items.map((s) => (
               <tr key={s.id}>
-                <td className="p-3"><div className="font-medium">{s.name}</div>{s.taxId && <div className="text-xs text-muted-foreground">VAT: {s.taxId}</div>}</td>
+                <td className="p-3"><div className="font-medium">{s.name}</div>{s.taxId && <div className="text-xs text-muted-foreground">{t("suppliersAdmin.vatPrefix")} {s.taxId}</div>}</td>
                 <td className="p-3 text-xs"><div>{s.contactName ?? "—"}</div><div className="text-muted-foreground">{formatKhPhone(s.phone)}{s.email ? ` · ${s.email}` : ""}</div></td>
                 <td className="p-3 text-xs text-muted-foreground">{[s.address, s.district, s.province].filter(Boolean).join(", ") || "—"}</td>
                 <td className="p-3 text-right">{s._count.purchases}</td>
                 <td className="p-3 text-right font-semibold">{money(s.totalPurchased)}</td>
                 <td className="p-3 text-right">
-                  <Button size="icon" variant="ghost" title="History" onClick={() => openHistory(s.id)}><History className="size-4" /></Button>
+                  <Button size="icon" variant="ghost" title={t("suppliersAdmin.historyTip")} onClick={() => openHistory(s.id)}><History className="size-4" /></Button>
                   {canWrite && <>
                     <Button size="icon" variant="ghost" onClick={() => openEdit(s)}><Pencil className="size-4" /></Button>
                     <Button size="icon" variant="ghost" className="text-red-600" onClick={() => remove(s.id)}><Trash2 className="size-4" /></Button>
@@ -108,45 +115,53 @@ export function SuppliersClient({ canWrite }: { canWrite: boolean }) {
 
       <Dialog open={!!modal} onOpenChange={(o) => !o && setModal(null)}>
         <DialogContent className="sm:max-w-lg">
-          <DialogHeader><DialogTitle>{modal === "new" ? "Add Supplier" : "Edit Supplier"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{modal === "new" ? t("suppliersAdmin.addSupplier") : t("suppliersAdmin.editSupplier")}</DialogTitle></DialogHeader>
           <form onSubmit={save} className="space-y-3">
-            <div className="space-y-1"><Label>Company name *</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+            <div className="space-y-1"><Label>{t("suppliersAdmin.companyName")} *</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label>Contact person</Label><Input value={form.contactName} onChange={(e) => setForm({ ...form, contactName: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Phone (+855)</Label><Input value={form.phone} placeholder="023 880 111" onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-              <div className="space-y-1"><Label>Tax / VAT ID</Label><Input value={form.taxId} onChange={(e) => setForm({ ...form, taxId: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("suppliersAdmin.contactPerson")}</Label><Input value={form.contactName} onChange={(e) => setForm({ ...form, contactName: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("checkout.phone")}</Label><Input value={form.phone} placeholder="023 880 111" onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("common.email")}</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("suppliersAdmin.taxVatId")}</Label><Input value={form.taxId} onChange={(e) => setForm({ ...form, taxId: e.target.value })} /></div>
               <div className="space-y-1">
-                <Label>Province</Label>
+                <Label>{t("checkout.province")}</Label>
                 <select className={sel} value={form.province} onChange={(e) => setForm({ ...form, province: e.target.value, district: "" })}>
-                  <option value="">— Select —</option>
-                  {PROVINCES.map((p) => <option key={p.code} value={p.en}>{p.en}</option>)}
+                  <option value="">{t("common.select")}</option>
+                  {PROVINCES.map((p) => <option key={p.code} value={p.en}>{locale === "km" ? `${p.km} (${p.en})` : p.en}</option>)}
                 </select>
               </div>
               <div className="space-y-1">
-                <Label>District</Label>
+                <Label>{t("checkout.district")}</Label>
                 <select className={sel} value={form.district} disabled={!prov} onChange={(e) => setForm({ ...form, district: e.target.value })}>
-                  <option value="">— Select —</option>
+                  <option value="">{t("common.select")}</option>
                   {prov?.districts.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
             </div>
-            <div className="space-y-1"><Label>Street address</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
-            <div className="space-y-1"><Label>Notes</Label><Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setModal(null)}>Cancel</Button><Button type="submit" disabled={busy}>{busy && <Loader2 className="animate-spin" />} Save</Button></DialogFooter>
+            <div className="space-y-1"><Label>{t("suppliersAdmin.streetAddress")}</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
+            <div className="space-y-1"><Label>{t("suppliersAdmin.notes")}</Label><Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setModal(null)}>{t("common.cancel")}</Button><Button type="submit" disabled={busy}>{busy && <Loader2 className="animate-spin" />} {t("common.save")}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!history} onOpenChange={(o) => !o && setHistory(null)}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader><DialogTitle>{history?.name} — Purchase History</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("suppliersAdmin.purchaseHistoryTitle", { name: history?.name ?? "" })}</DialogTitle></DialogHeader>
           {history && (
             <div className="space-y-4 text-sm">
               <div>
-                <h3 className="mb-2 font-semibold">Purchase Orders ({history.purchases.length})</h3>
+                <h3 className="mb-2 font-semibold">{t("suppliersAdmin.purchaseOrdersCount", { n: history.purchases.length })}</h3>
                 <table className="w-full text-xs">
-                  <thead className="border-b text-left text-muted-foreground"><tr><th className="py-1.5">PO #</th><th className="py-1.5">Date</th><th className="py-1.5">Status</th><th className="py-1.5 text-right">Items</th><th className="py-1.5 text-right">Total</th></tr></thead>
+                  <thead className="border-b text-left text-muted-foreground">
+                    <tr>
+                      <th className="py-1.5">{t("suppliersAdmin.colPoNo")}</th>
+                      <th className="py-1.5">{t("common.date")}</th>
+                      <th className="py-1.5">{t("common.status")}</th>
+                      <th className="py-1.5 text-right">{t("suppliersAdmin.colItems")}</th>
+                      <th className="py-1.5 text-right">{t("common.total")}</th>
+                    </tr>
+                  </thead>
                   <tbody className="divide-y">
                     {history.purchases.map((p) => (
                       <tr key={p.id}>
@@ -161,10 +176,17 @@ export function SuppliersClient({ canWrite }: { canWrite: boolean }) {
                 </table>
               </div>
               <div>
-                <h3 className="mb-2 font-semibold">Recent Batches Supplied</h3>
+                <h3 className="mb-2 font-semibold">{t("suppliersAdmin.recentBatches")}</h3>
                 <div className="max-h-56 overflow-y-auto">
                   <table className="w-full text-xs">
-                    <thead className="border-b text-left text-muted-foreground"><tr><th className="py-1.5">Batch</th><th className="py-1.5">Medicine</th><th className="py-1.5">Expiry</th><th className="py-1.5 text-right">On hand</th></tr></thead>
+                    <thead className="border-b text-left text-muted-foreground">
+                      <tr>
+                        <th className="py-1.5">{t("medicinesAdmin.colBatchNo")}</th>
+                        <th className="py-1.5">{t("inventoryAdmin.colMedicine")}</th>
+                        <th className="py-1.5">{t("medicinesAdmin.colExpiry")}</th>
+                        <th className="py-1.5 text-right">{t("medicinesAdmin.colOnHand")}</th>
+                      </tr>
+                    </thead>
                     <tbody className="divide-y">
                       {history.batches.map((b) => (
                         <tr key={b.id}><td className="py-1.5 font-mono">{b.batchNumber}</td><td className="py-1.5">{b.medicine.nameEn}</td><td className="py-1.5">{formatDate(b.expiryDate)}</td><td className="py-1.5 text-right">{b.quantity}</td></tr>

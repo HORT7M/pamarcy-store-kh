@@ -2,6 +2,7 @@ import { apiHandler, parseBody, parseParams } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { requireStaff } from "@/lib/auth/session";
 import { idParamSchema, supplierSchema } from "@/lib/validators";
+import { pickAllowed, SUPPLIER_WRITE_FIELDS } from "@/lib/allowlist";
 import { audit } from "@/lib/audit";
 import { conflict, notFound } from "@/lib/errors";
 
@@ -21,7 +22,8 @@ export const PUT = apiHandler<{ id: string }>(async (req, { params }) => {
   const { id } = await parseParams(params, idParamSchema);
   const existing = await prisma.supplier.findFirst({ where: { id, deletedAt: null }, select: { id: true } });
   if (!existing) throw notFound("Supplier not found");
-  const s = await prisma.supplier.update({ where: { id }, data: await parseBody(req, supplierSchema) });
+  const body = await parseBody(req, supplierSchema);
+  const s = await prisma.supplier.update({ where: { id }, data: pickAllowed(body, SUPPLIER_WRITE_FIELDS) });
   await audit(user.id, "supplier.update", "Supplier", id);
   return s;
 });

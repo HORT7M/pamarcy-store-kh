@@ -38,7 +38,7 @@ export function NotificationBell({ className }: { className?: string }) {
       <DropdownMenuContent align="end" className="w-80 p-0">
         <div className="flex items-center justify-between border-b px-3 py-2">
           <span className="text-sm font-semibold">{t("account.notifications")}</span>
-          {data.unread > 0 && <button onClick={markAll} className="text-xs text-primary hover:underline">Mark all read</button>}
+          {data.unread > 0 && <button onClick={markAll} className="text-xs text-primary hover:underline">{t("common.markAllRead")}</button>}
         </div>
         <div className="max-h-96 overflow-y-auto">
           {data.items.length === 0 && <div className="p-6 text-center text-sm text-muted-foreground">{t("common.noResults")}</div>}

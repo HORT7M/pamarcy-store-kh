@@ -19,7 +19,7 @@ import type { ClientBotPayload } from "@/lib/bot-client";
 
 export default function CartPage() {
   const { items, setQty, remove, ready, discountCode, setDiscountCode } = useCart();
-  const { t, pick, money } = useI18n();
+  const { t, tError, pick, money } = useI18n();
   const [code, setCode] = useState(discountCode);
   const [attemptKey, setAttemptKey] = useState(0);
   const [pendingBotPayload, setPendingBotPayload] = useState<ClientBotPayload | undefined>(undefined);
@@ -91,8 +91,8 @@ export default function CartPage() {
             </div>
             <BotProtectionWidget bot={promoBot} compact />
           </form>
-          {quote?.discountError && <p className="-mt-2 px-1 text-xs text-red-600">{quote.discountError}</p>}
-          {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+          {quote?.discountError && <p className="-mt-2 px-1 text-xs text-red-600">{tError(quote.discountError)}</p>}
+          {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{tError(error)}</p>}
           <OrderSummary quote={quote} loading={loading} deliveryKnown={false}>
             <Button asChild size="lg" className="w-full rounded-full" disabled={!quote?.stockOk}>
               {quote?.stockOk ? <Link href="/checkout">{t("cart.checkout")}</Link> : <span>{t("cart.checkout")}</span>}

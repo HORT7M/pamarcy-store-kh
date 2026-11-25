@@ -1,6 +1,7 @@
 import "server-only";
 import { headers } from "next/headers";
 import { prisma, type Tx } from "./db";
+import { clientIpFromHeaders } from "./api";
 import type { Prisma } from "@prisma/client";
 
 export async function audit(
@@ -14,7 +15,8 @@ export async function audit(
   let ip: string | null = null;
   try {
     const h = await headers();
-    ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+    const resolved = clientIpFromHeaders(h);
+    ip = resolved === "local" ? null : resolved;
   } catch {
     /* outside request scope */
   }

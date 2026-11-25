@@ -14,7 +14,7 @@ import type { ProductCard as Card } from "@/lib/catalog";
 
 export function ProductCard({ p }: { p: Card }) {
   const { add } = useCart();
-  const { t, pick } = useI18n();
+  const { t, pick, catName } = useI18n();
   const [added, setAdded] = useState(false);
   const name = pick(p as unknown as Record<string, unknown>, "name");
   const out = p.available <= 0;
@@ -39,7 +39,7 @@ export function ProductCard({ p }: { p: Card }) {
         </div>
       </Link>
       <div className="flex flex-1 flex-col gap-2 p-3.5">
-        <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{p.brand ?? pick(p as unknown as Record<string, unknown>, "category")}</div>
+        <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{p.brand ?? catName({ slug: p.categorySlug, nameEn: p.categoryEn, nameKm: p.categoryKm })}</div>
         <Link href={`/product/${encodeURIComponent(p.slug)}`} className="line-clamp-2 min-h-[2.6em] text-sm font-semibold leading-snug hover:text-primary">{name}</Link>
         <div className="mt-auto flex items-end justify-between gap-2">
           <Price usd={p.price} compareAt={p.compareAtPrice} size="sm" />

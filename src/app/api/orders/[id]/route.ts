@@ -1,14 +1,15 @@
 import { apiHandler, parseParams, parseQuery } from "@/lib/api";
 import { prisma } from "@/lib/db";
-import { assertOrderAccess } from "@/lib/order-access";
+import { roleHas } from "@/lib/auth/permissions";
+import { assertOrderAccess, resolveOrderToken } from "@/lib/order-access";
 import { paymentView } from "@/lib/services/payments";
 import { idParamSchema, orderTokenQuerySchema } from "@/lib/validators";
 
-/** GET /api/orders/:id – order detail (owner, staff, or guest token via ?token=) */
+/** GET /api/orders/:id – order detail (owner, authorized staff, or valid guest token for guest orders) */
 export const GET = apiHandler<{ id: string }>(async (req, { params }) => {
   const { id } = await parseParams(params, idParamSchema);
   const { token } = parseQuery(req, orderTokenQuerySchema);
-  await assertOrderAccess(id, token);
+  const { user } = await assertOrderAccess(id, resolveOrderToken(req, token), { mode: "read" });
   const order = await prisma.order.findUniqueOrThrow({
     where: { id },
     include: {
@@ -35,5 +36,10 @@ export const GET = apiHandler<{ id: string }>(async (req, { params }) => {
   });
   const payments = await Promise.all(order.payments.map((p) => paymentView(p)));
   const { cashierId: _c, reviewedById: _r, notes: _n, ...safeOrder } = order;
-  return { ...safeOrder, payments };
+  const canViewRx = !user?.isStaff || roleHas(user.role, "prescriptions.review");
+  return {
+    ...safeOrder,
+    prescriptionUrl: canViewRx ? safeOrder.prescriptionUrl : null,
+    payments,
+  };
 });

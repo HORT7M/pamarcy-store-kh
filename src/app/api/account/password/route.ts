@@ -26,7 +26,8 @@ export const POST = apiHandler(
     }
     handlePasswordChangeSuccess(ip, u.id);
     await prisma.user.update({ where: { id: u.id }, data: { passwordHash: await hashPassword(newPassword) } });
-    // revoke all other sessions
+    // revoke all other sessions and invalidate any outstanding password-reset tokens
+    await prisma.passwordResetToken.deleteMany({ where: { userId: u.id } });
     await destroyAllSessions(u.id);
     await createSession(u.id, u.isStaff);
     await audit(u.id, "auth.password_change", "User", u.id);

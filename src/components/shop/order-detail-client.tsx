@@ -15,7 +15,7 @@ import { api } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
 
 type Order = {
-  id: string; number: string; status: string; paymentStatus: string; fulfillmentStatus: string; prescriptionStatus: string; prescriptionNote: string | null; createdAt: string;
+  id: string; number: string; channel?: string; status: string; paymentStatus: string; fulfillmentStatus: string; prescriptionStatus: string; prescriptionNote: string | null; createdAt: string;
   subtotal: string; discountAmount: string; deliveryFee: string; total: string; fullName: string; phone: string; address: string; instructions: string | null; cancelReason: string | null;
   items: { id: string; nameEn: string; nameKm: string; sku: string; quantity: number; fulfilledQuantity: number; unitPrice: string; lineTotal: string; medicineId: string }[];
   history: { id: string; status: string; note: string | null; createdAt: string }[];
@@ -24,14 +24,15 @@ type Order = {
 
 const STEPS = ["PENDING", "CONFIRMED", "PROCESSING", "READY_FOR_DELIVERY", "SHIPPING", "DELIVERED"];
 
-export function OrderDetailClient({ order: o, token }: { order: Order; token: string }) {
-  const { t, money, pick } = useI18n();
+export function OrderDetailClient({ order: o }: { order: Order }) {
+  const { t, tError, money, pick } = useI18n();
   const router = useRouter();
   const { add } = useCart();
   const [cancelling, setCancelling] = useState(false);
   const idx = STEPS.indexOf(o.status);
-  const canPay = o.status === "PENDING" && o.paymentStatus !== "PAID" && o.prescriptionStatus !== "REJECTED";
-  const canCancel = o.status === "PENDING" && !["PAID", "PROCESSING"].includes(o.paymentStatus);
+  const isOnline = !o.channel || o.channel === "ONLINE";
+  const canPay = isOnline && o.status === "PENDING" && o.paymentStatus !== "PAID" && o.prescriptionStatus !== "REJECTED";
+  const canCancel = isOnline && o.status === "PENDING" && !["PAID", "PROCESSING"].includes(o.paymentStatus);
 
   async function cancel() {
     if (!confirm(t("common.confirm") + "?")) return;
@@ -41,7 +42,7 @@ export function OrderDetailClient({ order: o, token }: { order: Order; token: st
       toast.success(t("status.CANCELLED"));
       router.refresh();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(tError((e as Error).message));
     } finally {
       setCancelling(false);
     }
@@ -61,9 +62,9 @@ export function OrderDetailClient({ order: o, token }: { order: Order; token: st
           <div className="mt-2 flex flex-wrap gap-2"><StatusBadge status={o.status} /><StatusBadge status={o.paymentStatus} />{o.prescriptionStatus !== "NOT_REQUIRED" && <StatusBadge status={o.prescriptionStatus} />}</div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {canPay && <Button asChild><Link href={`/checkout/pay/${encodeURIComponent(o.id)}?token=${encodeURIComponent(token)}`}><CreditCard /> {t("checkout.payment")}</Link></Button>}
+          {canPay && <Button asChild><Link href={`/checkout/pay/${encodeURIComponent(o.id)}`}><CreditCard /> {t("checkout.payment")}</Link></Button>}
           <Button asChild variant="outline"><a href={`/invoice/${encodeURIComponent(o.id)}`} target="_blank" rel="noopener noreferrer"><Download /> {t("account.invoice")}</a></Button>
-          <Button variant="outline" onClick={reorder}><RotateCcw /> Reorder</Button>
+          <Button variant="outline" onClick={reorder}><RotateCcw /> {t("common.reorder")}</Button>
           {canCancel && <Button variant="outline" className="text-red-600" onClick={cancel} disabled={cancelling}>{cancelling ? <Loader2 className="animate-spin" /> : <XCircle />} {t("common.cancel")}</Button>}
         </div>
       </div>

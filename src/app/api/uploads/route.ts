@@ -22,6 +22,16 @@ export const POST = apiHandler(
   async (req) => {
     const ip = clientIp(req);
 
+    // Pre-parse IP cap prevents unauthenticated spam against staff-only or invalid folders before buffering multipart payloads
+    const preRl = rateLimitMulti([{ key: `uploads:pre:1m:${ip}`, limit: 40, windowMs: 60_000 }]);
+    if (!preRl.ok) {
+      throw tooManyRequests(
+        `Too many upload requests. Please wait ${formatWaitDuration(preRl.retryAfter)} before trying again.`,
+        preRl.retryAfter,
+        { limit: preRl.limit, resetAt: preRl.resetAt },
+      );
+    }
+
     // Enforces multipart/form-data Content-Type, Content-Length cap, AND bounded streaming read (prevents chunked DoS)
     const form = await readBoundedFormData(req);
 

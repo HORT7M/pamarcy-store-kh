@@ -5,6 +5,7 @@ import { AlertTriangle, ShieldCheck, Truck } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { SLUG_PARAM_RE } from "@/lib/validators";
 import { getT } from "@/lib/i18n/server";
+import { localizeCategoryName } from "@/lib/i18n/translate";
 import { getCurrentUser } from "@/lib/auth/session";
 import { toCards, productCardInclude } from "@/lib/catalog";
 import { sellableCutoff } from "@/lib/services/inventory";
@@ -32,7 +33,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
   const m = await load(slug);
   if (!m) notFound();
-  const { t, locale } = await getT();
+  const { t, tryT, locale } = await getT();
   const user = await getCurrentUser();
   const [card] = await toCards([m]);
   const nearest = await prisma.medicineBatch.findFirst({ where: { medicineId: m.id, quantity: { gt: 0 }, expiryDate: { gte: sellableCutoff() } }, orderBy: { expiryDate: "asc" }, select: { expiryDate: true } });
@@ -42,7 +43,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const desc = (locale === "km" ? m.descriptionKm : m.descriptionEn) ?? m.descriptionEn;
   const rows: [string, string | null | undefined][] = [
     [t("product.sku"), m.sku], [t("product.barcode"), m.barcode], [t("product.brand"), m.brand?.name], [t("product.manufacturer"), m.manufacturer],
-    [t("product.category"), locale === "km" ? m.category.nameKm : m.category.nameEn], [t("product.dosageForm"), m.dosageForm], [t("product.strength"), m.strength], [t("product.unit"), m.unit],
+    [t("product.category"), localizeCategoryName(m.category, locale, tryT)], [t("product.dosageForm"), m.dosageForm], [t("product.strength"), m.strength], [t("product.unit"), m.unit],
     [t("product.expiry"), m.tracksExpiry && nearest ? formatDate(nearest.expiryDate) : null],
   ];
   const avgRating = m.reviews.length ? m.reviews.reduce((s, r) => s + r.rating, 0) / m.reviews.length : 0;
@@ -50,12 +51,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
       <nav className="mb-4 text-xs text-muted-foreground">
-        <Link href="/" className="hover:text-primary">{t("common.home")}</Link> / <Link href={`/shop?category=${encodeURIComponent(m.category.slug)}`} className="hover:text-primary">{locale === "km" ? m.category.nameKm : m.category.nameEn}</Link> / <span>{name}</span>
+        <Link href="/" className="hover:text-primary">{t("common.home")}</Link> / <Link href={`/shop?category=${encodeURIComponent(m.category.slug)}`} className="hover:text-primary">{localizeCategoryName(m.category, locale, tryT)}</Link> / <span>{name}</span>
       </nav>
       <div className="grid gap-8 md:grid-cols-2">
         <div className="space-y-3">
           <ProductImage src={m.imageUrl} alt={name} className="aspect-square w-full rounded-3xl border" sizes="(max-width:768px) 100vw, 50vw" priority />
-          <p className="text-[11px] text-muted-foreground">Photo: real product photograph (Wikimedia Commons). Packaging may vary.</p>
+          <p className="text-[11px] text-muted-foreground">{t("common.packagingMayVary")}</p>
         </div>
         <div className="space-y-5">
           <div className="flex flex-wrap gap-2">

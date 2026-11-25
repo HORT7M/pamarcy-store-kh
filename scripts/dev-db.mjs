@@ -9,7 +9,7 @@ if (existsSync(".env") && typeof process.loadEnvFile === "function") {
 }
 
 function resolvePgCredentials() {
-  const dbUrl = process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL) : null;
+  const dbUrl = (process.env.DIRECT_URL || process.env.DATABASE_URL) ? new URL(process.env.DIRECT_URL || process.env.DATABASE_URL) : null;
   const user = process.env.PG_USER || (dbUrl ? decodeURIComponent(dbUrl.username) : "");
   const password = process.env.PG_PASSWORD || (dbUrl ? decodeURIComponent(dbUrl.password) : "");
   const port = Number(process.env.PG_PORT || dbUrl?.port || 5433);
@@ -29,6 +29,7 @@ const pg = new EmbeddedPostgres({
   user,
   password,
   port,
+  authMethod: "scram-sha-256",
   persistent: true,
   onLog: () => {},
 });

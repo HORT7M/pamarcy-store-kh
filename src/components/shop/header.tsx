@@ -21,7 +21,7 @@ type HeaderUser = { name: string; isStaff: boolean } | null;
 
 export function ShopHeader({ categories, user, phone }: { categories: Cat[]; user: HeaderUser; phone: string }) {
   const { count, ready } = useCart();
-  const { t, pick } = useI18n();
+  const { t, catName } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -54,7 +54,7 @@ export function ShopHeader({ categories, user, phone }: { categories: Cat[]; use
         </div>
       </div>
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
-        <button className="md:hidden" onClick={() => setOpen(true)} aria-label="Menu"><Menu className="size-6" /></button>
+        <button className="md:hidden" onClick={() => setOpen(true)} aria-label={t("common.menu")}><Menu className="size-6" /></button>
         <Logo subtitle={t("common.tagline")} className="[&>span>span:last-child]:hidden sm:[&>span>span:last-child]:block" />
         <div className="mx-4 hidden flex-1 md:block"><Suspense><SearchBar /></Suspense></div>
         <div className="ml-auto flex items-center gap-1">
@@ -95,7 +95,7 @@ export function ShopHeader({ categories, user, phone }: { categories: Cat[]; use
           <DropdownMenu>
             <DropdownMenuTrigger asChild><Button size="sm" className="mr-2 rounded-full"><Menu className="size-4" /> {t("common.allCategories")}</Button></DropdownMenuTrigger>
             <DropdownMenuContent className="w-64">
-              {categories.map((c) => <DropdownMenuItem key={c.slug} asChild><Link href={`/shop?category=${encodeURIComponent(c.slug)}`}>{pick(c, "name")}</Link></DropdownMenuItem>)}
+              {categories.map((c) => <DropdownMenuItem key={c.slug} asChild><Link href={`/shop?category=${encodeURIComponent(c.slug)}`}>{catName(c)}</Link></DropdownMenuItem>)}
             </DropdownMenuContent>
           </DropdownMenu>
           {nav.map((n) => (
@@ -115,7 +115,7 @@ export function ShopHeader({ categories, user, phone }: { categories: Cat[]; use
             </div>
             <div className="border-t pt-3">
               <div className="mb-2 px-3 text-xs font-semibold uppercase text-muted-foreground">{t("common.categories")}</div>
-              {categories.map((c) => <Link key={c.slug} href={`/shop?category=${c.slug}`} onClick={() => setOpen(false)} className="block rounded-lg px-3 py-2 text-sm hover:bg-secondary">{pick(c, "name")}</Link>)}
+              {categories.map((c) => <Link key={c.slug} href={`/shop?category=${c.slug}`} onClick={() => setOpen(false)} className="block rounded-lg px-3 py-2 text-sm hover:bg-secondary">{catName(c)}</Link>)}
             </div>
           </div>
         </div>

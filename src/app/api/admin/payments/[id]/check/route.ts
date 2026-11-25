@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { idParamSchema } from "@/lib/validators";
 
 export const POST = apiHandler<{ id: string }>(async (_req, { params }) => {
-  await requireStaff();
+  await requireStaff("payments.read");
   const { id } = await parseParams(params, idParamSchema);
   await checkPayment(id, { force: true });
   return paymentView(await prisma.payment.findUniqueOrThrow({ where: { id }, include: { method: { select: { code: true } } } }), { audience: "admin" });

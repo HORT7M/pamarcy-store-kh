@@ -75,6 +75,7 @@ export async function createOrder(input: CreateOrderInput, actorUserId: string |
       if (input.channel === "ONLINE") {
         if (!input.prescriptionUrl) throw badRequest("A prescription image is required for prescription-only medicines");
         const claimed = await verifyAndResolvePrescriptionClaim(input.prescriptionUrl, actorUserId);
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${claimed.canonicalUrl}))`;
         const alreadyUsed = await tx.order.findFirst({
           where: { prescriptionUrl: claimed.canonicalUrl },
           select: { id: true },
@@ -223,11 +224,42 @@ export async function fulfilOrderQuantities(orderId: string, quantities: Record<
   await checkLowStockForOrder(orderId);
 }
 
-export async function cancelOrder(orderId: string, userId: string | null, reason: string, opts: { system?: boolean } = {}) {
+export type CancelOrderOptions = {
+  system?: boolean;
+  /** Atomic check inside FOR UPDATE lock: require order to belong to this customer (returns 404 on mismatch) */
+  requireCustomerId?: string;
+  /** Atomic check inside FOR UPDATE lock: require order channel to match */
+  requireChannel?: "ONLINE" | "POS";
+  /** Atomic check inside FOR UPDATE lock: require POS order to belong to this cashier */
+  requireCashierId?: string;
+  /** Atomic check inside FOR UPDATE lock: require order to still be PENDING and not PAID/PROCESSING */
+  requirePendingUnpaid?: boolean;
+};
+
+export async function cancelOrder(orderId: string, userId: string | null, reason: string, opts: CancelOrderOptions = {}) {
   const o = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${orderId} FOR UPDATE`;
     const order = await tx.order.findUnique({ where: { id: orderId }, include: { payments: true } });
     if (!order) throw notFound("Order not found");
+    if (opts.requireCustomerId && order.customerId !== opts.requireCustomerId) {
+      throw notFound("Order not found");
+    }
+    if (opts.requireChannel && order.channel !== opts.requireChannel) {
+      if (opts.requireChannel === "POS") throw notFound("POS order not found");
+      throw forbidden("Only online orders can be cancelled here");
+    }
+    if (opts.requireCashierId && order.cashierId && order.cashierId !== opts.requireCashierId) {
+      throw forbidden("You can only cancel your own unpaid POS sale");
+    }
+    if (opts.requirePendingUnpaid) {
+      if (order.status !== "PENDING" || order.paymentStatus === "PAID" || order.paymentStatus === "PROCESSING") {
+        throw conflict(
+          opts.requireChannel === "POS"
+            ? "Only unpaid pending POS sales can be cancelled here"
+            : "This order can no longer be cancelled online. Please contact us.",
+        );
+      }
+    }
     if (order.status === "CANCELLED") return order;
     if (order.status === "DELIVERED") throw conflict("Delivered orders cannot be cancelled");
     await releaseOrderReservations(tx, orderId, order.number, userId);
@@ -257,8 +289,10 @@ export async function cancelOrder(orderId: string, userId: string | null, reason
 
 export async function reviewPrescription(orderId: string, approve: boolean, note: string | null, userId: string) {
   const o = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${orderId} FOR UPDATE`;
     const order = await tx.order.findUnique({ where: { id: orderId } });
     if (!order) throw notFound();
+    if (order.status === "CANCELLED") throw conflict("Order has been cancelled");
     if (order.prescriptionStatus !== "PENDING_REVIEW") throw conflict("Order is not awaiting prescription review");
     const s = await getSettings();
     const u = await tx.order.update({

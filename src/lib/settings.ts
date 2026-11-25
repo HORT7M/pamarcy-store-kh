@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "./db";
+import { pickAllowed, STORE_SETTINGS_FIELDS } from "./allowlist";
 
 export type StoreSettings = {
   storeNameEn: string;
@@ -45,12 +46,14 @@ export const DEFAULT_SETTINGS: StoreSettings = {
 
 export async function getSettings(): Promise<StoreSettings> {
   const row = await prisma.systemSetting.findUnique({ where: { key: "store" } });
-  return { ...DEFAULT_SETTINGS, ...((row?.value as Partial<StoreSettings>) ?? {}) };
+  const stored = (row?.value as Partial<StoreSettings> | null) ?? {};
+  return { ...DEFAULT_SETTINGS, ...(pickAllowed(stored as Record<string, unknown>, STORE_SETTINGS_FIELDS, { omitUndefined: true }) as Partial<StoreSettings>) };
 }
 
 export async function saveSettings(patch: Partial<StoreSettings>) {
   const current = await getSettings();
-  const value = { ...current, ...patch };
+  const safePatch = pickAllowed(patch as Record<string, unknown>, STORE_SETTINGS_FIELDS, { omitUndefined: true }) as Partial<StoreSettings>;
+  const value: StoreSettings = { ...current, ...(safePatch as Partial<StoreSettings>) };
   await prisma.systemSetting.upsert({ where: { key: "store" }, update: { value }, create: { key: "store", value } });
   return value;
 }

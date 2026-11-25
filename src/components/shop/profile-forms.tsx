@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { LOCALES, LOCALE_META, normalizeLocale, type Locale } from "@/lib/i18n/dictionaries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,9 +20,13 @@ function formatCountdown(seconds: number) {
 }
 
 export function ProfileForms({ user }: { user: { name: string; email: string; phone: string | null; locale: string } }) {
-  const { t } = useI18n();
+  const { t, tError, locale, setLocale } = useI18n();
   const router = useRouter();
-  const [p, setP] = useState({ name: user.name, phone: user.phone ?? "" });
+  const [p, setP] = useState<{ name: string; phone: string; locale: Locale }>({
+    name: user.name,
+    phone: user.phone ?? "",
+    locale: normalizeLocale(user.locale) ?? locale,
+  });
   const [pw, setPw] = useState({ currentPassword: "", newPassword: "", confirm: "" });
   const [busy, setBusy] = useState<"p" | "pw" | null>(null);
   const [pwCooldown, setPwCooldown] = useState(0);
@@ -41,10 +46,11 @@ export function ProfileForms({ user }: { user: { name: string; email: string; ph
     setBusy("p");
     try {
       await api("/api/account/profile", { method: "PATCH", body: p });
+      if (p.locale !== locale) setLocale(p.locale);
       toast.success(t("common.success"));
       router.refresh();
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(tError((err as Error).message));
     } finally {
       setBusy(null);
     }
@@ -52,7 +58,7 @@ export function ProfileForms({ user }: { user: { name: string; email: string; ph
   async function savePw(e: React.FormEvent) {
     e.preventDefault();
     if (pwCooldown > 0) return;
-    if (pw.newPassword !== pw.confirm) return toast.error("Passwords do not match");
+    if (pw.newPassword !== pw.confirm) return toast.error(t("common.passwordsMismatch"));
     if (pw.newPassword.length < 8 || !/[A-Za-z]/.test(pw.newPassword) || !/\d/.test(pw.newPassword)) return toast.error(t("auth.passwordHint"));
     setBusy("pw");
     try {
@@ -64,7 +70,7 @@ export function ProfileForms({ user }: { user: { name: string; email: string; ph
       if (fe.status === 429 && fe.retryAfter && fe.retryAfter > 0) {
         setPwCooldown(Math.ceil(fe.retryAfter));
       }
-      toast.error(fe.message);
+      toast.error(tError(fe.message));
     } finally {
       setBusy(null);
     }
@@ -76,6 +82,21 @@ export function ProfileForms({ user }: { user: { name: string; email: string; ph
         <div className="space-y-1.5"><Label>{t("common.email")}</Label><Input value={user.email} disabled /></div>
         <div className="space-y-1.5"><Label>{t("checkout.fullName")}</Label><Input maxLength={100} value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} /></div>
         <div className="space-y-1.5"><Label>{t("checkout.phone")}</Label><Input maxLength={25} value={p.phone} onChange={(e) => setP({ ...p, phone: e.target.value })} /></div>
+        <div className="space-y-1.5">
+          <Label htmlFor="profile-locale">{t("common.language")}</Label>
+          <select
+            id="profile-locale"
+            className="h-9 w-full rounded-md border bg-white px-3 text-sm"
+            value={p.locale}
+            onChange={(e) => setP({ ...p, locale: e.target.value as Locale })}
+          >
+            {LOCALES.map((code) => (
+              <option key={code} value={code}>
+                {LOCALE_META[code].nativeName} ({LOCALE_META[code].englishName})
+              </option>
+            ))}
+          </select>
+        </div>
         <Button type="submit" disabled={busy === "p"}>{busy === "p" && <Loader2 className="animate-spin" />}{t("common.save")}</Button>
       </form>
       <form onSubmit={savePw} className="space-y-4 rounded-2xl border bg-white p-6 shadow-sm">

@@ -27,7 +27,7 @@ type Addr = { id: string; label: string | null; fullName: string; phone: string;
 
 export function CheckoutForm({ user, addresses }: { user: { name: string; email: string; phone: string | null } | null; addresses: Addr[] }) {
   const { items, ready, discountCode, clear } = useCart();
-  const { t, pick, money } = useI18n();
+  const { t, tError, pick, money } = useI18n();
   const router = useRouter();
   const def = addresses.find((a) => a.isDefault) ?? addresses[0];
   const [selected, setSelected] = useState<string | null>(def?.id ?? null);
@@ -57,7 +57,7 @@ export function CheckoutForm({ user, addresses }: { user: { name: string; email:
   }, [selected, addresses]);
 
   async function upload(file: File, useCurrentUploadBot = false) {
-    if (file.size > 5 * 1024 * 1024) return toast.error("Max 5 MB");
+    if (file.size > 5 * 1024 * 1024) return toast.error(t("common.maxFileSize"));
     setUploading(true);
     try {
       const fd = new FormData();
@@ -85,7 +85,7 @@ export function CheckoutForm({ user, addresses }: { user: { name: string; email:
       if (uploadBot.handleError(fe)) {
         setPendingRxFile(file);
       }
-      toast.error(fe.message);
+      toast.error(tError(fe.message));
     } finally {
       setUploading(false);
     }
@@ -95,7 +95,7 @@ export function CheckoutForm({ user, addresses }: { user: { name: string; email:
     const e: Record<string, string> = {};
     if (fullName.trim().length < 2) e.fullName = t("common.required");
     if (!isKhPhone(phone)) e.phone = t("checkout.invalidPhone");
-    if (email && !/^\S+@\S+\.\S+$/.test(email)) e.email = "Invalid email";
+    if (email && !/^\S+@\S+\.\S+$/.test(email)) e.email = t("common.invalidEmail");
     if (!addr.province) e.province = t("common.required");
     if (!addr.district) e.district = t("common.required");
     if (quote?.requiresPrescription && !rxUrl) e.rx = t("checkout.prescriptionHelp");
@@ -110,7 +110,7 @@ export function CheckoutForm({ user, addresses }: { user: { name: string; email:
     if (!validate()) return toast.error(t("common.error"), { description: Object.values(errors)[0] });
     setSubmitting(true);
     try {
-      const r = await api<{ id: string; token: string }>("/api/orders", {
+      const r = await api<{ id: string; token: string | null }>("/api/orders", {
         method: "POST",
         body: {
           items: items.map((i) => ({ medicineId: i.medicineId, quantity: i.quantity })),
@@ -126,11 +126,11 @@ export function CheckoutForm({ user, addresses }: { user: { name: string; email:
         },
       });
       clear();
-      router.push(`/checkout/pay/${encodeURIComponent(r.id)}?token=${encodeURIComponent(r.token)}`);
+      router.push(r.token ? `/checkout/pay/${encodeURIComponent(r.id)}?token=${encodeURIComponent(r.token)}` : `/checkout/pay/${encodeURIComponent(r.id)}`);
     } catch (e) {
       const fe = e as FetchError;
       checkoutBot.handleError(fe, phone);
-      toast.error(fe.message);
+      toast.error(tError(fe.message));
       setSubmitting(false);
     }
   }

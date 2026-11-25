@@ -1,6 +1,7 @@
 import { apiHandler, clientIp, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { cartQuoteSchema } from "@/lib/validators";
+import { CART_QUOTE_FIELDS, pickAllowed } from "@/lib/allowlist";
 import { quoteCart } from "@/lib/services/orders";
 import { getAvailability } from "@/lib/services/inventory";
 import { ApiError, tooManyRequests } from "@/lib/errors";
@@ -19,13 +20,14 @@ const schema = cartQuoteSchema.extend({ _bot: botVerificationSchema });
 export const POST = apiHandler(
   async (req) => {
     const ip = clientIp(req);
-    const { _bot, ...body } = await parseBody(req, schema);
+    const parsed = await parseBody(req, schema);
+    const quoteInput = pickAllowed(parsed, CART_QUOTE_FIELDS);
 
     // Normal cart recalculations stay 100% frictionless; only promo-code attempts undergo anti-guessing protection
-    if (body.discountCode) {
+    if (quoteInput.discountCode) {
       const check = await verifyBotProtection(req, {
         action: "promo_code",
-        bot: _bot,
+        bot: parsed._bot,
       });
       if (check.verified) {
         clearPromoFailureSignal(ip);
@@ -35,9 +37,14 @@ export const POST = apiHandler(
     let discountError: string | null = null;
     let q;
     try {
-      q = await quoteCart(prisma, { ...body, channel: "ONLINE" });
+      q = await quoteCart(prisma, {
+        items: quoteInput.items,
+        discountCode: quoteInput.discountCode,
+        province: quoteInput.province,
+        channel: "ONLINE",
+      });
     } catch (e) {
-      if (e instanceof ApiError && body.discountCode && e.status === 400 && !/cart|available/i.test(e.message)) {
+      if (e instanceof ApiError && quoteInput.discountCode && e.status === 400 && !/cart|available/i.test(e.message)) {
         discountError = e.message;
         if (/invalid discount code/i.test(e.message)) {
           recordPromoFailureSignal(ip);
@@ -50,7 +57,12 @@ export const POST = apiHandler(
             );
           }
         }
-        q = await quoteCart(prisma, { ...body, discountCode: null, channel: "ONLINE" });
+        q = await quoteCart(prisma, {
+          items: quoteInput.items,
+          discountCode: null,
+          province: quoteInput.province,
+          channel: "ONLINE",
+        });
       } else {
         throw e;
       }

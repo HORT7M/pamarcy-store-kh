@@ -430,7 +430,7 @@ export async function requireUser(): Promise<SessionUser> {
 
 export async function requireCustomer(): Promise<SessionUser & { customerId: string }> {
   const u = await requireUser();
-  if (!u.customerId) throw forbidden("Customer account required");
+  if (u.isStaff || !u.customerId) throw forbidden("Customer account required");
   return u as SessionUser & { customerId: string };
 }
 
@@ -441,6 +441,17 @@ export async function requireStaff(perm?: Permission): Promise<SessionUser> {
   return u;
 }
 
+export async function requireStaffAny(perms: readonly Permission[]): Promise<SessionUser> {
+  const u = await requireUser();
+  if (!u.isStaff) throw forbidden();
+  if (!perms.some((perm) => roleHas(u.role, perm))) throw forbidden();
+  return u;
+}
+
 export function can(u: SessionUser | null, perm: Permission) {
   return !!u && u.isStaff && roleHas(u.role, perm);
+}
+
+export function canAny(u: SessionUser | null, perms: readonly Permission[]) {
+  return !!u && u.isStaff && perms.some((perm) => roleHas(u.role, perm));
 }

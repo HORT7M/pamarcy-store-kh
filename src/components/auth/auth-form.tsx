@@ -26,7 +26,7 @@ function formatCountdown(seconds: number) {
 }
 
 export function AuthForm({ mode, scope = "customer" }: { mode: "login" | "register"; scope?: "customer" | "admin" }) {
-  const { t } = useI18n();
+  const { t, tError } = useI18n();
   const router = useRouter();
   const sp = useSearchParams();
   const [form, setForm] = useState({ name: "", email: "", phone: "", identifier: "", password: "" });
@@ -52,7 +52,7 @@ export function AuthForm({ mode, scope = "customer" }: { mode: "login" | "regist
     const e: Record<string, string> = {};
     if (mode === "register") {
       if (form.name.trim().length < 2) e.name = t("common.required");
-      if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = "Invalid email";
+      if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = t("common.invalidEmail");
       if (!isKhPhone(form.phone)) e.phone = t("checkout.invalidPhone");
       if (form.password.length < 8 || !/[A-Za-z]/.test(form.password) || !/\d/.test(form.password)) e.password = t("auth.passwordHint");
     } else {
@@ -93,7 +93,7 @@ export function AuthForm({ mode, scope = "customer" }: { mode: "login" | "regist
         setCooldown(Math.ceil(fe.retryAfter));
       }
       bot.handleError(fe, mode === "register" ? form.email : form.identifier);
-      toast.error(fe.message);
+      toast.error(tError(fe.message));
       setLoading(false);
     }
   }
@@ -114,7 +114,7 @@ export function AuthForm({ mode, scope = "customer" }: { mode: "login" | "regist
       {f("password", t("auth.password"), (
         <div className="relative">
           <Input id="password" type={show ? "text" : "password"} maxLength={128} value={form.password} onChange={set("password")} autoComplete={mode === "login" ? "current-password" : "new-password"} aria-invalid={!!errors.password} className="pr-10" />
-          <button type="button" onClick={() => setShow((s) => !s)} className="absolute right-2.5 top-2 text-muted-foreground" aria-label="toggle password">{show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button>
+          <button type="button" onClick={() => setShow((s) => !s)} className="absolute right-2.5 top-2 text-muted-foreground" aria-label={t("auth.togglePassword")}>{show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button>
         </div>
       ))}
       {mode === "login" && scope === "customer" && (

@@ -1,17 +1,20 @@
 import Image from "next/image";
 import credits from "../../../../public/images/CREDITS.json";
+import { getT } from "@/lib/i18n/server";
 import { safeExternalUrl, safeImageSrc } from "@/lib/sanitize";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Photo credits" };
 
 type C = { title: string; source: string; author: string; license: string; licenseUrl: string | null };
 
-export default function CreditsPage() {
+export default async function CreditsPage() {
+  const { t } = await getT();
   const entries = Object.entries(credits as Record<string, C>);
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
-      <h1 className="text-2xl font-bold">Photo credits</h1>
-      <p className="mt-2 text-sm text-muted-foreground">All product, category and banner images are real photographs from Wikimedia Commons, used under their respective free licences. No AI-generated imagery is used.</p>
+      <h1 className="text-2xl font-bold">{t("common.photoCredits")}</h1>
+      <p className="mt-2 text-sm text-muted-foreground">{t("common.creditsDesc")}</p>
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {entries.map(([file, c]) => {
           const imgSrc = safeImageSrc(`/images/${file}`);
@@ -29,7 +32,7 @@ export default function CreditsPage() {
                 ) : (
                   <span className="line-clamp-1 font-medium">{label}</span>
                 )}
-                <div className="line-clamp-1 text-muted-foreground">By {c.author}</div>
+                <div className="line-clamp-1 text-muted-foreground">{t("common.byAuthor", { author: c.author })}</div>
                 <div>{licenseHref ? <a href={licenseHref} target="_blank" rel="noopener noreferrer" className="hover:underline">{c.license}</a> : c.license}</div>
               </div>
             </div>

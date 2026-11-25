@@ -42,6 +42,24 @@ const KM_NUMBERS: Record<number, string> = {
   17: "ដប់ប្រាំពីរ", 18: "ដប់ប្រាំបី",
 };
 
+const VI_NUMBERS: Record<number, string> = {
+  1: "một", 2: "hai", 3: "ba", 4: "bốn", 5: "năm", 6: "sáu", 7: "bảy", 8: "tám", 9: "chín",
+  10: "mười", 11: "mười một", 12: "mười hai", 13: "mười ba", 14: "mười bốn", 15: "mười lăm", 16: "mười sáu",
+  17: "mười bảy", 18: "mười tám",
+};
+
+const ZH_NUMBERS: Record<number, string> = {
+  1: "一", 2: "二", 3: "三", 4: "四", 5: "五", 6: "六", 7: "七", 8: "八", 9: "九",
+  10: "十", 11: "十一", 12: "十二", 13: "十三", 14: "十四", 15: "十五", 16: "十六",
+  17: "十七", 18: "十八",
+};
+
+const FR_NUMBERS: Record<number, string> = {
+  1: "un", 2: "deux", 3: "trois", 4: "quatre", 5: "cinq", 6: "six", 7: "sept", 8: "huit", 9: "neuf",
+  10: "dix", 11: "onze", 12: "douze", 13: "treize", 14: "quatorze", 15: "quinze", 16: "seize",
+  17: "dix-sept", 18: "dix-huit",
+};
+
 function jitter(v: number, range = 0.7): string {
   const delta = ((randomInt(0, 1001) / 1000) * 2 - 1) * range;
   return (v + delta).toFixed(1);
@@ -163,13 +181,31 @@ export function generateVisualCaptcha(): { imageDataUri: string; answer: string 
  * Generate an accessible localized word-arithmetic prompt for screen-reader or low-vision users.
  * Always paired with PoW + single-use signed token + rate limiting.
  */
-export function generateAccessibleCaptcha(locale: "km" | "en"): { prompt: string; answer: string } {
+export function generateAccessibleCaptcha(locale: "km" | "en" | "vi" | "zh-CN" | "fr"): { prompt: string; answer: string } {
   const { a, b, op, answer } = generateMathEquation();
   if (locale === "km") {
     const wordA = KM_NUMBERS[a] ?? String(a);
     const wordB = KM_NUMBERS[b] ?? String(b);
     const opWord = op === "+" ? "បូក" : "ដក";
     return { prompt: `តើ ${wordA} ${opWord} ${wordB} ស្មើប៉ុន្មាន?`, answer };
+  }
+  if (locale === "vi") {
+    const wordA = VI_NUMBERS[a] ?? String(a);
+    const wordB = VI_NUMBERS[b] ?? String(b);
+    const opWord = op === "+" ? "cộng" : "trừ";
+    return { prompt: `${wordA} ${opWord} ${wordB} bằng bao nhiêu?`, answer };
+  }
+  if (locale === "zh-CN") {
+    const wordA = ZH_NUMBERS[a] ?? String(a);
+    const wordB = ZH_NUMBERS[b] ?? String(b);
+    const opWord = op === "+" ? "加" : "减";
+    return { prompt: `${wordA}${opWord}${wordB}等于多少？`, answer };
+  }
+  if (locale === "fr") {
+    const wordA = FR_NUMBERS[a] ?? String(a);
+    const wordB = FR_NUMBERS[b] ?? String(b);
+    const opWord = op === "+" ? "plus" : "moins";
+    return { prompt: `Combien font ${wordA} ${opWord} ${wordB} ?`, answer };
   }
   const wordA = EN_NUMBERS[a] ?? String(a);
   const wordB = EN_NUMBERS[b] ?? String(b);

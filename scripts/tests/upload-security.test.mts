@@ -824,10 +824,10 @@ describe("Live HTTP upload & private storage access control", () => {
       const custRx = await fetch(`${APP}${canonicalPath}`, { headers: { Cookie: customerCookie } });
       assert.equal(custRx.status, 200);
 
-      // Valid guest order token -> 200 OK; wrong token -> 403
+      // Customer-owned order rejects unauthenticated guest HMAC tokens (guest tokens only unlock guest orders)
       const tok = orderAccessToken(ord.id);
-      const goodGuest = await fetch(`${APP}${canonicalPath}?orderId=${ord.id}&token=${tok}`);
-      assert.equal(goodGuest.status, 200);
+      const custWithGuestTok = await fetch(`${APP}${canonicalPath}?orderId=${ord.id}&token=${tok}`);
+      assert.equal(custWithGuestTok.status, 403);
       const badGuest = await fetch(`${APP}${canonicalPath}?orderId=${ord.id}&token=invalidtoken12345678901234567890`);
       assert.equal(badGuest.status, 403);
 
