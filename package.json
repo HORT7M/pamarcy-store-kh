@@ -1,0 +1,74 @@
+{
+  "name": "pamarcy-store",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "db:start": "node --env-file-if-exists=.env scripts/dev-db.mjs",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx --env-file-if-exists=.env --conditions=react-server prisma/seed.ts",
+    "db:reset": "prisma migrate reset --force --skip-seed && npm run db:seed",
+    "db:backup": "bash scripts/backup-db.sh",
+    "images:fetch": "node scripts/fetch-images.mjs",
+    "test": "tsx --env-file-if-exists=.env --conditions=react-server --test scripts/tests/*.test.mts",
+    "cron": "node --env-file-if-exists=.env scripts/cron.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/noto-sans-khmer": "^5.3.0",
+    "@prisma/client": "^6.19.3",
+    "bakong-khqr": "^1.0.20",
+    "bcryptjs": "^3.0.3",
+    "class-variance-authority": "^0.7.1",
+    "cloudinary": "^2.11.0",
+    "clsx": "^2.1.1",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.9",
+    "lucide-react": "^1.79.0",
+    "next": "15.5.29",
+    "nodemailer": "^10.6.1",
+    "qrcode": "^1.5.4",
+    "radix-ui": "^1.8.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "recharts": "^3.11.1",
+    "server-only": "^0.0.1",
+    "sonner": "^2.0.8",
+    "tailwind-merge": "^3.7.1",
+    "tw-animate-css": "^1.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^22.20.5",
+    "@types/nodemailer": "^8.0.2",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "embedded-postgres": "^18.7.0-beta.19",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.29",
+    "prisma": "^6.19.3",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "tsx --env-file-if-exists=.env --conditions=react-server prisma/seed.ts"
+  },
+  "overrides": {
+    "axios": "^1.21.1",
+    "postcss": "^8.5.33",
+    "deepmerge-ts": "^8.0.2",
+    "effect": "^3.22.5"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}

@@ -1,0 +1,400 @@
+{
+  "paracetamol-500": {
+    "dir": "products",
+    "q": [
+      "Paracetamol 500 mg tablets box",
+      "paracetamol tablets blister"
+    ]
+  },
+  "ibuprofen-400": {
+    "dir": "products",
+    "q": [
+      "Ibuprofen 400 tablets",
+      "ibuprofen tablets"
+    ]
+  },
+  "aspirin-81": {
+    "dir": "products",
+    "q": [
+      "Aspirin tablets",
+      "aspirin pills"
+    ]
+  },
+  "diclofenac-gel": {
+    "dir": "products",
+    "q": [
+      "Voltaren gel",
+      "diclofenac gel tube"
+    ]
+  },
+  "mefenamic-acid": {
+    "dir": "products",
+    "q": [
+      "Mefenamic acid",
+      "Ponstan capsules",
+      "capsules blister pack"
+    ]
+  },
+  "vitamin-c-1000": {
+    "dir": "products",
+    "q": [
+      "Vitamin C effervescent tablets",
+      "vitamin C tablets"
+    ]
+  },
+  "multivitamin": {
+    "dir": "products",
+    "q": [
+      "Multivitamin tablets bottle",
+      "multivitamin pills"
+    ]
+  },
+  "calcium-d3": {
+    "dir": "products",
+    "q": [
+      "Calcium vitamin D tablets",
+      "calcium supplement tablets"
+    ]
+  },
+  "omega-3": {
+    "dir": "products",
+    "q": [
+      "Fish oil capsules",
+      "omega-3 capsules"
+    ]
+  },
+  "zinc": {
+    "dir": "products",
+    "q": [
+      "Zinc gluconate tablets",
+      "zinc supplement",
+      "Zinc lozenges"
+    ],
+    "skip": [
+      "prenatal"
+    ]
+  },
+  "cough-syrup": {
+    "dir": "products",
+    "q": [
+      "Cough syrup bottle",
+      "cough medicine syrup"
+    ]
+  },
+  "loratadine-10": {
+    "dir": "products",
+    "q": [
+      "Loratadine tablets",
+      "Claritin tablets"
+    ]
+  },
+  "cetirizine-10": {
+    "dir": "products",
+    "q": [
+      "Cetirizine tablets",
+      "Zyrtec"
+    ]
+  },
+  "lozenges": {
+    "dir": "products",
+    "q": [
+      "Throat lozenges",
+      "Strepsils"
+    ]
+  },
+  "nasal-spray": {
+    "dir": "products",
+    "q": [
+      "Nasal spray bottle",
+      "saline nasal spray"
+    ]
+  },
+  "ors": {
+    "dir": "products",
+    "q": [
+      "Oral rehydration salts sachet",
+      "ORS packet"
+    ]
+  },
+  "omeprazole-20": {
+    "dir": "products",
+    "q": [
+      "Omeprazole capsules",
+      "omeprazole 20 mg"
+    ]
+  },
+  "antacid": {
+    "dir": "products",
+    "q": [
+      "Antacid tablets",
+      "Gaviscon"
+    ]
+  },
+  "loperamide": {
+    "dir": "products",
+    "q": [
+      "Loperamide capsules",
+      "Imodium"
+    ]
+  },
+  "probiotic": {
+    "dir": "products",
+    "q": [
+      "Probiotic capsules",
+      "probiotics supplement"
+    ]
+  },
+  "bandages": {
+    "dir": "products",
+    "q": [
+      "Adhesive bandages plasters",
+      "band-aid adhesive bandage"
+    ]
+  },
+  "povidone-iodine": {
+    "dir": "products",
+    "q": [
+      "Povidone-iodine bottle",
+      "Betadine"
+    ]
+  },
+  "gauze": {
+    "dir": "products",
+    "q": [
+      "Gauze pads sterile",
+      "gauze bandage roll"
+    ]
+  },
+  "elastic-bandage": {
+    "dir": "products",
+    "q": [
+      "Elastic bandage roll",
+      "crepe bandage"
+    ]
+  },
+  "first-aid-kit": {
+    "dir": "products",
+    "q": [
+      "First aid kit contents",
+      "first aid kit"
+    ]
+  },
+  "sunscreen": {
+    "dir": "products",
+    "q": [
+      "Sunscreen bottle",
+      "sunscreen lotion"
+    ]
+  },
+  "calamine": {
+    "dir": "products",
+    "q": [
+      "Calamine lotion",
+      "calamine"
+    ]
+  },
+  "hydrocortisone": {
+    "dir": "products",
+    "q": [
+      "Hydrocortisone cream tube",
+      "hydrocortisone cream"
+    ]
+  },
+  "clotrimazole": {
+    "dir": "products",
+    "q": [
+      "Clotrimazole cream",
+      "antifungal cream tube"
+    ]
+  },
+  "moisturizer": {
+    "dir": "products",
+    "q": [
+      "Moisturizer cream",
+      "face cream jar",
+      "hand cream tube",
+      "Body lotion bottle"
+    ]
+  },
+  "thermometer": {
+    "dir": "products",
+    "q": [
+      "Digital clinical thermometer",
+      "digital thermometer"
+    ]
+  },
+  "bp-monitor": {
+    "dir": "products",
+    "q": [
+      "Blood pressure monitor digital",
+      "sphygmomanometer digital"
+    ]
+  },
+  "pulse-oximeter": {
+    "dir": "products",
+    "q": [
+      "Pulse oximeter finger",
+      "fingertip pulse oximeter"
+    ]
+  },
+  "glucometer": {
+    "dir": "products",
+    "q": [
+      "Glucose meter",
+      "glucometer blood sugar"
+    ]
+  },
+  "face-masks": {
+    "dir": "products",
+    "q": [
+      "Surgical face masks box",
+      "surgical mask"
+    ]
+  },
+  "hand-sanitizer": {
+    "dir": "products",
+    "q": [
+      "Hand sanitizer bottle",
+      "hand sanitizer gel"
+    ]
+  },
+  "toothpaste": {
+    "dir": "products",
+    "q": [
+      "Toothpaste tube",
+      "toothpaste"
+    ]
+  },
+  "mouthwash": {
+    "dir": "products",
+    "q": [
+      "Mouthwash bottle",
+      "Listerine"
+    ]
+  },
+  "cotton-swabs": {
+    "dir": "products",
+    "q": [
+      "Cotton swabs",
+      "cotton buds"
+    ]
+  },
+  "amoxicillin-500": {
+    "dir": "products",
+    "q": [
+      "Amoxicillin capsules",
+      "amoxicillin 500"
+    ]
+  },
+  "metformin-500": {
+    "dir": "products",
+    "q": [
+      "Metformin tablets",
+      "metformin 500 mg"
+    ]
+  },
+  "amlodipine-5": {
+    "dir": "products",
+    "q": [
+      "Amlodipine tablets",
+      "amlodipine"
+    ]
+  },
+  "atorvastatin-20": {
+    "dir": "products",
+    "q": [
+      "Atorvastatin varieties"
+    ]
+  },
+  "azithromycin-250": {
+    "dir": "products",
+    "q": [
+      "Azithromycin tablets",
+      "azithromycin"
+    ]
+  },
+  "salbutamol-inhaler": {
+    "dir": "products",
+    "q": [
+      "Salbutamol inhaler",
+      "Ventolin inhaler"
+    ]
+  },
+  "hero-pharmacy": {
+    "dir": "banners",
+    "width": 1600,
+    "q": [
+      "Generic medicines with the yellow G stripe on pharmacy shelves S\u00e3o Paulo"
+    ]
+  },
+  "pharmacist": {
+    "dir": "banners",
+    "width": 1600,
+    "q": [
+      "pharmacist at work pharmacy",
+      "pharmacist counter"
+    ]
+  },
+  "vitamins-banner": {
+    "dir": "banners",
+    "width": 1600,
+    "q": [
+      "vitamins supplements pills assortment",
+      "colorful pills"
+    ]
+  },
+  "cat-pain": {
+    "dir": "categories",
+    "q": [
+      "Paracetamol tablets"
+    ]
+  },
+  "cat-vitamins": {
+    "dir": "categories",
+    "q": [
+      "Vitamin capsules"
+    ]
+  },
+  "cat-cold": {
+    "dir": "categories",
+    "q": [
+      "Cold medicine"
+    ]
+  },
+  "cat-digestive": {
+    "dir": "categories",
+    "q": [
+      "Antacid"
+    ]
+  },
+  "cat-firstaid": {
+    "dir": "categories",
+    "q": [
+      "First aid kit"
+    ]
+  },
+  "cat-skin": {
+    "dir": "categories",
+    "q": [
+      "Skin cream tube"
+    ]
+  },
+  "cat-equipment": {
+    "dir": "categories",
+    "q": [
+      "Stethoscope"
+    ]
+  },
+  "cat-personal": {
+    "dir": "categories",
+    "q": [
+      "Toothbrush toothpaste"
+    ]
+  },
+  "cat-rx": {
+    "dir": "categories",
+    "q": [
+      "Prescription medication bottles"
+    ]
+  }
+}
