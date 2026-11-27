@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/compon
 import { api } from "@/lib/fetcher";
 import { formatDateTime } from "@/lib/date";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { localizeNotification } from "@/lib/i18n/translate";
 import { safeInternalPath } from "@/lib/sanitize";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +16,7 @@ type N = { id: string; title: string; message: string; link: string | null; read
 
 /** Polls notifications every 20s for near-real-time updates between admin and storefront. */
 export function NotificationBell({ className }: { className?: string }) {
-  const { t } = useI18n();
+  const { t, tryT } = useI18n();
   const [data, setData] = useState<{ items: N[]; unread: number }>({ items: [], unread: 0 });
   const load = useCallback(() => api<{ items: N[]; unread: number }>("/api/account/notifications").then(setData).catch(() => {}), []);
   useEffect(() => {
@@ -44,10 +45,11 @@ export function NotificationBell({ className }: { className?: string }) {
           {data.items.length === 0 && <div className="p-6 text-center text-sm text-muted-foreground">{t("common.noResults")}</div>}
           {data.items.map((n) => {
             const safeLink = safeInternalPath(n.link);
+            const localized = localizeNotification(n, t, tryT);
             const body = (
               <div className={cn("border-b px-3 py-2.5 text-sm last:border-0 hover:bg-muted/50", !n.readAt && "bg-secondary/40")}>
-                <div className="font-medium leading-snug">{n.title}</div>
-                <div className="line-clamp-2 text-xs text-muted-foreground">{n.message}</div>
+                <div className="font-medium leading-snug">{localized.title}</div>
+                <div className="line-clamp-2 text-xs text-muted-foreground">{localized.message}</div>
                 <div className="mt-0.5 text-[11px] text-muted-foreground">{formatDateTime(n.createdAt)}</div>
               </div>
             );

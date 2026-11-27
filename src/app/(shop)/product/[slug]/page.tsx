@@ -25,8 +25,12 @@ async function load(slug: string) {
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const m = await load((await params).slug);
-  return m ? { title: m.nameEn, description: m.descriptionEn ?? undefined } : {};
+  const [m, { locale }] = await Promise.all([load((await params).slug), getT()]);
+  if (!m) return {};
+  return {
+    title: locale === "km" ? m.nameKm : m.nameEn,
+    description: (locale === "km" ? m.descriptionKm : m.descriptionEn) ?? m.descriptionEn ?? undefined,
+  };
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {

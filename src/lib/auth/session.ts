@@ -162,9 +162,7 @@ async function tryClearCookieInMutableContext() {
 export async function createSession(userId: string, isStaff: boolean) {
   const [jar, h] = await Promise.all([cookies(), headers()]);
   const prevToken = jar.get(SESSION_COOKIE)?.value;
-  if (isValidSessionTokenFormat(prevToken)) {
-    await prisma.session.deleteMany({ where: { tokenHash: hashSessionToken(prevToken) } });
-  }
+  const prevTokenHash = isValidSessionTokenFormat(prevToken) ? hashSessionToken(prevToken) : null;
 
   const nowMs = Date.now();
   const now = new Date(nowMs);
@@ -175,13 +173,13 @@ export async function createSession(userId: string, isStaff: boolean) {
   const token = randomBytes(32).toString("base64url");
   const { ip, userAgent } = extractClientMeta(h);
 
-  // Prune stale sessions for this user and enforce active concurrent session limit
+  // Invalidate any pre-existing session token and prune stale sessions for this user in one query
   await prisma.session.deleteMany({
     where: {
-      userId,
       OR: [
-        { expiresAt: { lte: now } },
-        { lastSeenAt: { lte: new Date(nowMs - idleMs) } },
+        ...(prevTokenHash ? [{ tokenHash: prevTokenHash }] : []),
+        { userId, expiresAt: { lte: now } },
+        { userId, lastSeenAt: { lte: new Date(nowMs - idleMs) } },
       ],
     },
   });
@@ -197,21 +195,23 @@ export async function createSession(userId: string, isStaff: boolean) {
     }
   }
 
-  await prisma.session.create({
-    data: {
-      tokenHash: hashSessionToken(token),
-      userId,
-      scope: isStaff ? "admin" : "customer",
-      ip,
-      userAgent,
-      createdAt: now,
-      lastSeenAt: now,
-      expiresAt,
-    },
-  });
+  await Promise.all([
+    prisma.session.create({
+      data: {
+        tokenHash: hashSessionToken(token),
+        userId,
+        scope: isStaff ? "admin" : "customer",
+        ip,
+        userAgent,
+        createdAt: now,
+        lastSeenAt: now,
+        expiresAt,
+      },
+    }),
+    prisma.user.update({ where: { id: userId }, data: { lastLoginAt: now } }),
+  ]);
 
   jar.set(SESSION_COOKIE, token, buildSessionCookieOptions(expiresAt, isSecureRequest(h), nowMs));
-  await prisma.user.update({ where: { id: userId }, data: { lastLoginAt: now } });
 }
 
 /**

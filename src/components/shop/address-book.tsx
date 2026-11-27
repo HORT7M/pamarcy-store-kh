@@ -21,7 +21,7 @@ type A = { id: string; label: string | null; fullName: string; phone: string; pr
 const empty = { label: "", fullName: "", phone: "", province: "", district: "", commune: "", village: "", street: "", instructions: "", isDefault: false };
 
 export function AddressBook({ initial }: { initial: A[] }) {
-  const { t, locale } = useI18n();
+  const { t, tError, locale } = useI18n();
   const router = useRouter();
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const [form, setForm] = useState(empty);
@@ -48,7 +48,7 @@ export function AddressBook({ initial }: { initial: A[] }) {
       setEditing(null);
       router.refresh();
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(tError((err as Error).message));
     } finally {
       setSaving(false);
     }
@@ -59,11 +59,11 @@ export function AddressBook({ initial }: { initial: A[] }) {
       await api(`/api/account/addresses/${id}`, { method: "DELETE" });
       router.refresh();
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(tError((err as Error).message));
     }
   }
   async function makeDefault(a: A) {
-    await api(`/api/account/addresses/${a.id}`, { method: "PUT", body: { label: a.label ?? "", fullName: a.fullName, phone: a.phone, province: a.province, district: a.district, commune: a.commune ?? "", village: a.village ?? "", street: a.street ?? "", instructions: a.instructions ?? "", isDefault: true } }).catch((e) => toast.error(e.message));
+    await api(`/api/account/addresses/${a.id}`, { method: "PUT", body: { label: a.label ?? "", fullName: a.fullName, phone: a.phone, province: a.province, district: a.district, commune: a.commune ?? "", village: a.village ?? "", street: a.street ?? "", instructions: a.instructions ?? "", isDefault: true } }).catch((e) => toast.error(tError((e as Error).message)));
     router.refresh();
   }
 

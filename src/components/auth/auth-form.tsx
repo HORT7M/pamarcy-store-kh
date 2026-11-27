@@ -78,15 +78,19 @@ export function AuthForm({ mode, scope = "customer" }: { mode: "login" | "regist
           body: { name: form.name, email: form.email, phone: form.phone, password: form.password, _bot },
         });
         toast.success(t("common.success"));
-        router.push(safeNext(sp.get("next"), "/account"));
+        router.replace(safeNext(sp.get("next"), "/account"));
+        router.refresh();
       } else {
         const r = await api<{ user: { isStaff: boolean } }>("/api/auth/login", {
           method: "POST",
           body: { identifier: form.identifier, password: form.password, scope, _bot },
         });
-        router.push(safeNext(sp.get("next"), r.user.isStaff ? "/admin" : "/account"));
+        const target = safeNext(sp.get("next"), r.user.isStaff ? "/admin" : "/account");
+        router.replace(target);
+        if (scope !== "admin" || !target.startsWith("/admin")) {
+          router.refresh();
+        }
       }
-      router.refresh();
     } catch (e) {
       const fe = e as FetchError;
       if (fe.status === 429 && fe.retryAfter && fe.retryAfter > 0) {

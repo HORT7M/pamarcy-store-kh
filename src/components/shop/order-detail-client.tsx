@@ -25,7 +25,7 @@ type Order = {
 const STEPS = ["PENDING", "CONFIRMED", "PROCESSING", "READY_FOR_DELIVERY", "SHIPPING", "DELIVERED"];
 
 export function OrderDetailClient({ order: o }: { order: Order }) {
-  const { t, tError, money, pick } = useI18n();
+  const { t, tryT, tError, money, pick } = useI18n();
   const router = useRouter();
   const { add } = useCart();
   const [cancelling, setCancelling] = useState(false);
@@ -124,7 +124,7 @@ export function OrderDetailClient({ order: o }: { order: Order }) {
             <h3 className="mb-2 font-semibold">{t("account.payments")}</h3>
             {o.payments.length === 0 ? <p className="text-muted-foreground">—</p> : o.payments.map((p) => (
               <div key={p.id} className="border-t py-2 first:border-0">
-                <div className="flex items-center justify-between"><span className="font-medium">{p.method}</span><StatusBadge status={p.status} /></div>
+                <div className="flex items-center justify-between"><span className="font-medium">{tryT(`catalogData.paymentMethods.${p.method}`, p.method)}</span><StatusBadge status={p.status} /></div>
                 <div className="font-mono text-[11px] text-muted-foreground">{p.reference}</div>
                 <div className="text-xs">{p.currency} {p.currency === "USDT" ? Number(p.amount).toFixed(4) : Number(p.amount).toFixed(p.currency === "KHR" ? 0 : 2)} · {formatDateTime(p.paidAt ?? p.createdAt)}</div>
               </div>

@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 export function AddToCart({ product: p, wished: initialWished, canWish }: { product: ProductCard; wished: boolean; canWish: boolean }) {
   const { add } = useCart();
-  const { t } = useI18n();
+  const { t, tError } = useI18n();
   const router = useRouter();
   const [qty, setQty] = useState(1);
   const [wished, setWished] = useState(initialWished);
@@ -26,7 +26,7 @@ export function AddToCart({ product: p, wished: initialWished, canWish }: { prod
       const r = await api<{ wished: boolean }>("/api/account/wishlist", { method: "POST", body: { medicineId: p.id } });
       setWished(r.wished);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(tError((e as Error).message));
     }
   }
 

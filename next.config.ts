@@ -10,6 +10,16 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ["bakong-khqr", "@prisma/client"],
+  webpack(config, { dev }) {
+    if (dev) {
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored:
+          /^((?:[^/]*(?:\/|$))*)(\.(git|next|pgdata|logs|qa-shots)|node_modules|backups|storage)(\/((?:[^/]*(?:\/|$))*)(?:$|\/))?/,
+      };
+    }
+    return config;
+  },
   async headers() {
     return getNextConfigHeaders();
   },

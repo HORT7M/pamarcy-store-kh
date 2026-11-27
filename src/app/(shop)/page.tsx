@@ -60,7 +60,7 @@ export default async function HomePage() {
             </div>
           </div>
           <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-xl">
-            <Image src="/images/banners/hero-pharmacy.jpg" alt="Pharmacy shelves with medicines" fill priority sizes="(max-width:768px) 100vw, 50vw" className="object-cover" />
+            <Image src="/images/banners/hero-pharmacy.jpg" alt={t("home.heroImgAlt")} fill priority sizes="(max-width:768px) 100vw, 50vw" className="object-cover" />
             <div className="absolute bottom-4 left-4 rounded-2xl bg-white/95 px-4 py-3 shadow-lg">
               <div className="text-2xl font-bold text-primary">25</div>
               <div className="text-xs text-muted-foreground">{t("home.provincesDelivered")}</div>

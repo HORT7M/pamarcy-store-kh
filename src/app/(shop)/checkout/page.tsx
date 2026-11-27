@@ -1,9 +1,13 @@
 import { prisma } from "@/lib/db";
+import { getT } from "@/lib/i18n/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { CheckoutForm } from "@/components/shop/checkout-form";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Checkout" };
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("meta.checkout") };
+}
 
 export default async function CheckoutPage() {
   const user = await getCurrentUser();

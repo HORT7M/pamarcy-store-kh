@@ -4,7 +4,10 @@ import { getT } from "@/lib/i18n/server";
 import { safeExternalUrl, safeImageSrc } from "@/lib/sanitize";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Photo credits" };
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("meta.photoCredits") };
+}
 
 type C = { title: string; source: string; author: string; license: string; licenseUrl: string | null };
 

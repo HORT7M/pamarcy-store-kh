@@ -6,7 +6,15 @@ import { LOCALES, LOCALE_META } from "@/lib/i18n/dictionaries";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-export function LocaleSwitcher({ className, compact }: { className?: string; compact?: boolean }) {
+export function LocaleSwitcher({
+  className,
+  compact,
+  hideCurrency,
+}: {
+  className?: string;
+  compact?: boolean;
+  hideCurrency?: boolean;
+}) {
   const { locale, setLocale, currency, setCurrency, t } = useI18n();
   const current = LOCALE_META[locale] ?? LOCALE_META.km;
 
@@ -55,23 +63,25 @@ export function LocaleSwitcher({ className, compact }: { className?: string; com
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <div className="flex items-center rounded-full border bg-white p-0.5" role="group" aria-label={t("common.currency")}>
-        {!compact && <Coins className="ml-1.5 size-3.5 text-muted-foreground" />}
-        {(["USD", "KHR"] as const).map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => setCurrency(c)}
-            className={cn(
-              "rounded-full px-2.5 py-1 font-medium transition",
-              currency === c ? "bg-brand-blue text-white" : "text-muted-foreground hover:text-foreground",
-            )}
-            aria-pressed={currency === c}
-          >
-            {c === "USD" ? "$" : "៛"}
-          </button>
-        ))}
-      </div>
+      {!hideCurrency && (
+        <div className="flex items-center rounded-full border bg-white p-0.5" role="group" aria-label={t("common.currency")}>
+          {!compact && <Coins className="ml-1.5 mr-1 size-3.5 shrink-0 text-muted-foreground" />}
+          {(["USD", "KHR"] as const).map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCurrency(c)}
+              className={cn(
+                "rounded-full px-2.5 py-1 font-medium transition",
+                currency === c ? "bg-brand-blue text-white" : "text-muted-foreground hover:text-foreground",
+              )}
+              aria-pressed={currency === c}
+            >
+              {c === "USD" ? "$" : "៛"}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

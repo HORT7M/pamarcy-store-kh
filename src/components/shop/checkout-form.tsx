@@ -216,7 +216,7 @@ export function CheckoutForm({ user, addresses }: { user: { name: string; email:
               </div>
             ))}
           </div>
-          {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+          {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{tError(error)}</p>}
           <OrderSummary quote={quote} loading={loading} deliveryKnown={!!addr.province}>
             <BotProtectionWidget bot={checkoutBot} compact />
             {errors.bot && <p className="text-xs text-red-600">{errors.bot}</p>}

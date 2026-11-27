@@ -3,17 +3,21 @@ import { prisma } from "@/lib/db";
 import { assertOrderAccess } from "@/lib/order-access";
 import { getSettings } from "@/lib/settings";
 import { getT } from "@/lib/i18n/server";
-import { localizePaymentMethod } from "@/lib/i18n/translate";
+import { localizeCustomerDisplayName, localizePaymentMethod } from "@/lib/i18n/translate";
 import { formatDateTime } from "@/lib/date";
 import { formatKHR, usdToKhr } from "@/lib/money";
 import { formatKhPhone } from "@/lib/phone";
 import { provinceLabel } from "@/lib/cambodia";
 import { PrintButton } from "@/components/common/print-button";
+import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { ApiError } from "@/lib/errors";
 import { ENTITY_ID_RE, ORDER_ACCESS_TOKEN_RE } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Invoice", robots: { index: false } };
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("meta.invoice"), robots: { index: false } };
+}
 
 /** Printable invoice (A4) / receipt (?format=receipt, 80mm thermal). Access: owner, staff, or signed guest token. */
 export default async function InvoicePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ token?: string; format?: string }> }) {
@@ -42,7 +46,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
 
   return (
     <div className={receipt ? "mx-auto w-[80mm] bg-white p-3 font-mono text-[11px]" : "mx-auto max-w-3xl bg-white p-8 text-sm print:p-0"}>
-      <div className="no-print mb-4 flex justify-end gap-2"><PrintButton /></div>
+      <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-2"><LocaleSwitcher compact hideCurrency /><PrintButton /></div>
       <header className={receipt ? "text-center" : "flex items-start justify-between border-b pb-6"}>
         <div>
           <div className={receipt ? "text-base font-bold" : "text-2xl font-bold text-[#0f9d58]"}>{s.storeNameEn}</div>
@@ -65,7 +69,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
         <section className="grid grid-cols-2 gap-6 py-6">
           <div>
             <div className="text-xs font-semibold uppercase text-gray-500">{t("invoice.billTo")}</div>
-            <div className="font-medium">{order.fullName}</div>
+            <div className="font-medium">{localizeCustomerDisplayName(order.fullName, t)}</div>
             <div>{formatKhPhone(order.phone)}</div>
             {order.email && <div>{order.email}</div>}
             {addr && <div className="text-gray-600">{addr}</div>}

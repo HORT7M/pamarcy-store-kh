@@ -111,7 +111,7 @@ export function PaymentPanel({ payment: initial, checkUrl, hashUrl, captureUrl, 
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
         {p.status === "FAILED" ? <XCircle className="size-12 text-red-600" /> : <Clock className="size-12 text-slate-500" />}
         <h3 className="text-lg font-bold">{p.status === "FAILED" ? t("pay.failed") : t("pay.expired")}</h3>
-        {p.failureReason && <p className="text-sm text-red-800">{p.failureReason}</p>}
+        {p.failureReason && <p className="text-sm text-red-800">{tError(p.failureReason)}</p>}
         {onRetry && <Button onClick={onRetry} className="rounded-full"><RefreshCw /> {t("pay.newQr")}</Button>}
       </div>
     );
@@ -139,13 +139,13 @@ export function PaymentPanel({ payment: initial, checkUrl, hashUrl, captureUrl, 
               <div className="text-xs text-muted-foreground">{p.merchant?.name}</div>
               <div className="text-xl font-bold">{amountLabel}</div>
             </div>
-            <Image src={safeQrSrc} alt="KHQR payment code" width={320} height={320} className="h-auto w-full p-3" unoptimized />
+            <Image src={safeQrSrc} alt={t("pay.khqrAlt")} width={320} height={320} className="h-auto w-full p-3" unoptimized />
           </div>
           <p className="max-w-sm text-center text-xs text-muted-foreground">{t("pay.scanKhqr")}</p>
           {p.merchant && !compact && (
             <div className="w-full max-w-sm rounded-lg border bg-white p-3 text-xs">
               <div className="flex justify-between"><span className="text-muted-foreground">{t("pay.merchant")}</span><span className="font-medium">{p.merchant.name}, {p.merchant.city}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Bakong ID</span><span className="font-mono">{p.merchant.account}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{t("pay.bakongId")}</span><span className="font-mono">{p.merchant.account}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">{t("pay.reference")}</span><span className="font-mono">{p.reference}</span></div>
             </div>
           )}
@@ -156,7 +156,7 @@ export function PaymentPanel({ payment: initial, checkUrl, hashUrl, captureUrl, 
         <div className="space-y-4">
           <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"><AlertTriangle className="size-4 shrink-0" />{t("pay.usdtOnly")}</div>
           <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
-            {safeQrSrc && <Image src={safeQrSrc} alt="USDT payment QR" width={180} height={180} className="mx-auto rounded-xl border bg-white p-2" unoptimized />}
+            {safeQrSrc && <Image src={safeQrSrc} alt={t("pay.usdtQrAlt")} width={180} height={180} className="mx-auto rounded-xl border bg-white p-2" unoptimized />}
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm"><span className="rounded-md bg-[#26a17b] px-2 py-0.5 text-xs font-bold text-white">USDT</span><span className="font-semibold">{p.network.label}</span></div>
               <CopyRow label={t("pay.amount")} value={p.amount} />
@@ -176,17 +176,17 @@ export function PaymentPanel({ payment: initial, checkUrl, hashUrl, captureUrl, 
               ) : (
                 <span className="break-all font-mono">{p.txHash}</span>
               )}
-              {p.failureReason && <div className="text-indigo-700">{p.failureReason}</div>}
+              {p.failureReason && <div className="text-indigo-700">{tError(p.failureReason)}</div>}
             </div>
           ) : (
             hashUrl && (
               <form onSubmit={submitHash} className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="txhash">{t("pay.txHash")}</label>
                 <div className="flex gap-2">
-                  <Input id="txhash" value={hash} onChange={(e) => setHash(e.target.value)} placeholder={p.network.code === "TRC20" ? "64-character hex" : "0x…"} className="font-mono text-xs" maxLength={100} />
+                  <Input id="txhash" value={hash} onChange={(e) => setHash(e.target.value)} placeholder={p.network.code === "TRC20" ? t("pay.txHashHexPh") : "0x…"} className="font-mono text-xs" maxLength={100} />
                   <Button type="submit" disabled={submitting || hash.trim().length < 20}>{submitting ? <Loader2 className="animate-spin" /> : t("pay.submitHash")}</Button>
                 </div>
-                {p.failureReason && <p className="text-xs text-red-600">{p.failureReason}</p>}
+                {p.failureReason && <p className="text-xs text-red-600">{tError(p.failureReason)}</p>}
               </form>
             )
           )}
@@ -201,10 +201,10 @@ export function PaymentPanel({ payment: initial, checkUrl, hashUrl, captureUrl, 
               <Button asChild size="lg" className="w-full rounded-full bg-[#ffc439] text-[#003087] hover:bg-[#f2ba36]">
                 <a href={safePaypalUrl} rel="noopener noreferrer"><span className="font-extrabold italic">Pay</span><span className="-ml-1.5 font-extrabold italic text-[#009cde]">Pal</span> — {t("pay.payWithPaypal")}</a>
               </Button>
-              {compact && safeQrSrc && <Image src={safeQrSrc} alt="PayPal link QR" width={180} height={180} className="mx-auto rounded-xl border p-2" unoptimized />}
+              {compact && safeQrSrc && <Image src={safeQrSrc} alt={t("pay.paypalQrAlt")} width={180} height={180} className="mx-auto rounded-xl border p-2" unoptimized />}
             </>
           )}
-          {captureUrl && <p className="text-xs text-muted-foreground">PayPal ID: <span className="font-mono">{p.paypalOrderId}</span></p>}
+          {captureUrl && <p className="text-xs text-muted-foreground">{t("pay.paypalId")}: <span className="font-mono">{p.paypalOrderId}</span></p>}
         </div>
       )}
 

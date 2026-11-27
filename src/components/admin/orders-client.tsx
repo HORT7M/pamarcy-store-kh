@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/common/status-badge";
 import { PageHeader, Pagination } from "./common";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { localizeCustomerDisplayName } from "@/lib/i18n/translate";
 import { formatDateTime } from "@/lib/date";
 import { formatKhPhone } from "@/lib/phone";
 import { api } from "@/lib/fetcher";
@@ -94,7 +95,7 @@ export function OrdersClient() {
                   <Link href={`/admin/orders/${o.id}`} className="font-mono font-semibold text-primary hover:underline">{o.number}</Link>
                   <div className="text-[11px] text-muted-foreground">{t("ordersAdmin.itemsCount", { n: o._count.items })}{o.prescriptionStatus === "PENDING_REVIEW" && <Badge className="ml-1 bg-amber-500 text-[10px] text-white">Rx</Badge>}</div>
                 </td>
-                <td className="p-3"><div className="font-medium">{o.fullName}</div><div className="text-xs text-muted-foreground">{formatKhPhone(o.phone)}</div></td>
+                <td className="p-3"><div className="font-medium">{localizeCustomerDisplayName(o.fullName, t)}</div><div className="text-xs text-muted-foreground">{formatKhPhone(o.phone)}</div></td>
                 <td className="p-3 text-xs"><Badge variant="secondary">{tryT(`status.${o.channel}`, o.channel)}</Badge></td>
                 <td className="p-3"><StatusBadge status={o.status} /></td>
                 <td className="p-3"><div className="flex items-center gap-1"><StatusBadge status={o.paymentStatus} />{o.payments[0] && <span className="text-[11px] text-muted-foreground">{tryT(`catalogData.paymentMethods.${o.payments[0].method.code}`, o.payments[0].method.code)}</span>}</div></td>

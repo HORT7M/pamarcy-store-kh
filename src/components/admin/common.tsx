@@ -26,14 +26,14 @@ export function StatCard({ label, value, sub, icon: Icon, tone = "green" }: { la
     slate: "bg-slate-100 text-slate-700",
   };
   return (
-    <div className="rounded-2xl border bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border bg-white p-3.5 shadow-sm sm:p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="text-xs font-medium text-muted-foreground">{label}</div>
-          <div className="mt-1 truncate text-2xl font-bold tracking-tight">{value}</div>
+          <div className="mt-1 truncate text-lg font-bold tracking-tight sm:text-2xl">{value}</div>
           {sub && <div className="mt-0.5 truncate text-xs text-muted-foreground">{sub}</div>}
         </div>
-        <div className={cn("rounded-xl p-2.5 shrink-0", tones[tone])}><Icon className="size-5" /></div>
+        <div className={cn("rounded-xl p-2 shrink-0 sm:p-2.5", tones[tone])}><Icon className="size-4 sm:size-5" /></div>
       </div>
     </div>
   );
@@ -46,7 +46,7 @@ export function Pagination({ page, pageSize, total, onChange }: { page: number; 
   const from = Math.min((page - 1) * pageSize + 1, total);
   const to = Math.min(page * pageSize, total);
   return (
-    <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
       <span>{t("common.showingRange", { from, to, total })}</span>
       <div className="flex items-center gap-2">
         <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => onChange(page - 1)}>{t("common.prev")}</Button>

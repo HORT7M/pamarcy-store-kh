@@ -153,7 +153,7 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
   }
 
   const methodIcons = { CASH: Banknote, KHQR: QrCode, USDT: Wallet, PAYPAL: CreditCard };
-  const methodShortLabel = (code: MethodDto["code"]) => (code === "CASH" ? tryT("catalogData.paymentMethods.CASH", code) : code);
+  const methodShortLabel = (code: MethodDto["code"]) => (code === "CASH" ? tryT("catalogData.paymentMethods.CASH", code) : code === "PAYPAL" ? "PayPal" : code);
 
   return (
     <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
@@ -256,7 +256,7 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
                   key={m.code}
                   type="button"
                   disabled={!m.ready}
-                  title={m.reason}
+                  title={m.reason ? tError(m.reason) : undefined}
                   onClick={() => setMethod(m.code)}
                   className={cn(
                     "flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-semibold transition disabled:opacity-40",

@@ -9,7 +9,10 @@ import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { AuthForm } from "@/components/auth/auth-form";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Staff Sign In · Admin", robots: { index: false } };
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("meta.staffSignIn"), robots: { index: false } };
+}
 
 export default async function AdminLoginPage() {
   const user = await getCurrentUser();

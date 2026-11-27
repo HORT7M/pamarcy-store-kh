@@ -14,22 +14,34 @@ export function SearchBar({ className, large }: { className?: string; large?: bo
   return (
     <form
       role="search"
-      className={cn("relative flex w-full items-center", className)}
+      className={cn(
+        "flex w-full items-center gap-1.5 rounded-full border bg-muted/40 pl-3.5 pr-1 transition focus-within:border-primary focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/10",
+        large ? "h-13" : "h-10",
+        className,
+      )}
       onSubmit={(e) => {
         e.preventDefault();
         router.push(`/shop${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ""}`);
       }}
     >
-      <Search className="pointer-events-none absolute left-3.5 size-4 text-muted-foreground" />
+      <Search className="size-4 shrink-0 text-muted-foreground" />
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder={t("common.searchPlaceholder")}
         aria-label={t("common.search")}
-        className={cn("w-full rounded-full border bg-muted/40 pl-10 pr-24 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10", large ? "h-13 text-base" : "h-10 text-sm")}
+        className={cn("min-w-0 flex-1 bg-transparent outline-none", large ? "text-base" : "text-sm")}
         maxLength={100}
       />
-      <button type="submit" className={cn("absolute right-1 rounded-full bg-primary px-4 font-medium text-white hover:bg-primary/90", large ? "h-11" : "h-8 text-sm")}>{t("common.search")}</button>
+      <button
+        type="submit"
+        className={cn(
+          "shrink-0 whitespace-nowrap rounded-full bg-primary px-3.5 font-medium text-white transition hover:bg-primary/90 sm:px-4",
+          large ? "h-11 text-sm sm:text-base" : "h-8 text-xs sm:text-sm",
+        )}
+      >
+        {t("common.search")}
+      </button>
     </form>
   );
 }

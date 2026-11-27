@@ -118,11 +118,11 @@ export function PayClient({ order, token, methods, initialPayment, paypalReturn 
                   {methods.map((m) => {
                     const Icon = ICONS[m.code];
                     return (
-                      <button key={m.code} type="button" disabled={!m.ready || creating} onClick={() => choose(m)} title={m.reason}
+                      <button key={m.code} type="button" disabled={!m.ready || creating} onClick={() => choose(m)} title={m.reason ? tError(m.reason) : undefined}
                         className={cn("flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50", method === m.code ? "border-primary bg-secondary ring-2 ring-primary/20" : "hover:border-primary/50")}>
                         <Icon className="size-6 text-primary" />
                         <span className="font-semibold">{payMethodName(m)}</span>
-                        {!m.ready && <span className="text-[11px] text-muted-foreground">{t("pay.unavailable")}{m.reason ? ` – ${m.reason}` : ""}</span>}
+                        {!m.ready && <span className="text-[11px] text-muted-foreground">{t("pay.unavailable")}{m.reason ? ` – ${tError(m.reason)}` : ""}</span>}
                       </button>
                     );
                   })}

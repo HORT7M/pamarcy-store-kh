@@ -4,7 +4,10 @@ import { getT } from "@/lib/i18n/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { PasswordResetForm } from "@/components/auth/password-reset-form";
 
-export const metadata = { title: "Forgot Password" };
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("meta.forgotPassword") };
+}
 
 export default async function Page() {
   const user = await getCurrentUser();

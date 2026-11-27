@@ -51,7 +51,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local database, uploads & backups
+# local database, logs, uploads & backups
+/.logs
+.logs/
+/.qa-shots
+.qa-shots/
 /.pgdata
 .pgdata/
 /public/uploads

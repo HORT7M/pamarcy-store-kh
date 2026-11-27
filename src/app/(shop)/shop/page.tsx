@@ -11,7 +11,10 @@ import { normalizeSingleLineText } from "@/lib/sanitize";
 import { CATEGORY_SLUG_RE } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Shop" };
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("meta.shop") };
+}
 
 type SP = Record<string, string | string[] | undefined>;
 const ALLOWED_SORTS = new Set(["popular", "newest", "price_asc", "price_desc", "name"]);

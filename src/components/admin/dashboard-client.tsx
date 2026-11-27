@@ -11,6 +11,7 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from "recharts";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { localizeCustomerDisplayName } from "@/lib/i18n/translate";
 import { PageHeader, StatCard } from "./common";
 import { StatusBadge } from "@/components/common/status-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -218,7 +219,7 @@ export function DashboardClient({ data }: { data: DashData }) {
               {data.recent.map((o) => (
                 <tr key={o.id} className="hover:bg-muted/30">
                   <td className="py-2.5 pr-3"><Link href={`/admin/orders/${o.id}`} className="font-mono font-medium text-primary hover:underline">{o.number}</Link></td>
-                  <td className="py-2.5 pr-3">{o.fullName}</td>
+                  <td className="py-2.5 pr-3">{localizeCustomerDisplayName(o.fullName, t)}</td>
                   <td className="py-2.5 pr-3 text-xs">{tryT(`status.${o.channel}`, o.channel)}</td>
                   <td className="py-2.5 pr-3"><StatusBadge status={o.status} /></td>
                   <td className="py-2.5 pr-3"><StatusBadge status={o.paymentStatus} /></td>

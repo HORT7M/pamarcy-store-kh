@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getT } from "@/lib/i18n/server";
 import { assertOnlineOrderPayAccess } from "@/lib/order-access";
 import { paymentView } from "@/lib/services/payments";
 import { availableMethods } from "@/lib/services/payments/config";
@@ -8,7 +9,10 @@ import { ApiError } from "@/lib/errors";
 import { ENTITY_ID_RE, ORDER_ACCESS_TOKEN_RE } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Payment" };
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("meta.payment") };
+}
 
 export default async function PayPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ token?: string; paypal?: string }> }) {
   const { id } = await params;

@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/common/status-badge";
 import { useI18n } from "@/components/providers/i18n-provider";
-import type { TKey } from "@/lib/i18n/translate";
+import { localizeCustomerDisplayName, type TKey } from "@/lib/i18n/translate";
 import { formatDate, formatDateTime } from "@/lib/date";
 import { formatKhPhone } from "@/lib/phone";
 import { formatKHR, usdToKhr } from "@/lib/money";
@@ -243,12 +243,12 @@ export function AdminOrderDetail({ orderId, perms }: { orderId: string; perms: {
                   </div>
                 </div>
                 {p.providerTxnId && <div className="break-all font-mono text-xs text-emerald-700">{t("ordersAdmin.txnPrefix")} {p.providerTxnId}</div>}
-                {p.failureReason && <div className="text-xs text-red-600">{p.failureReason}</div>}
+                {p.failureReason && <div className="text-xs text-red-600">{tError(p.failureReason)}</div>}
                 {p.transactions.length > 0 && (
                   <div className="mt-2 space-y-1 border-t pt-2 text-xs text-muted-foreground">
                     {p.transactions.map((tx) => (
                       <div key={tx.id} className="flex justify-between gap-2">
-                        <span><b>{tx.type}</b> ({tx.status}): {tx.message ?? tx.externalId ?? "—"}</span>
+                        <span><b>{tryT(`pay.txTypes.${tx.type}`, tx.type)}</b> ({tryT(`pay.txStatuses.${tx.status}`, tx.status)}): {tx.message ? tError(tx.message) : (tx.externalId ?? "—")}</span>
                         <span className="shrink-0">{formatDateTime(tx.createdAt)}</span>
                       </div>
                     ))}
@@ -262,7 +262,7 @@ export function AdminOrderDetail({ orderId, perms }: { orderId: string; perms: {
         <div className="space-y-5">
           <section className="space-y-1.5 rounded-2xl border bg-white p-5 text-sm shadow-sm">
             <h2 className="mb-2 font-semibold">{t("ordersAdmin.customerDelivery")}</h2>
-            <div className="font-medium">{o.fullName}</div>
+            <div className="font-medium">{localizeCustomerDisplayName(o.fullName, t)}</div>
             <div>{formatKhPhone(o.phone)}</div>
             {o.email && <div className="text-muted-foreground">{o.email}</div>}
             <div className="pt-1 text-muted-foreground">{[o.street, o.village, o.commune, o.district, o.province].filter(Boolean).join(", ") || t("ordersAdmin.walkInCounter")}</div>
