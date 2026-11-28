@@ -346,7 +346,7 @@ describe("Live HTTP security headers & SSR nonce compatibility (when server is r
     }
 
     // 2. Static assets excluded from middleware must STILL receive full security headers + locked-down CSP
-    for (const asset of ["/images/products/paracetamol-500.jpg", "/favicon.ico", "/logo-mark.svg"]) {
+    for (const asset of ["/images/products/pain-relief/paracetamol-500mg-tablets.jpg", "/favicon.ico", "/logo-mark.svg"]) {
       const res = await fetch(`${APP}${asset}`);
       assert.equal(res.status, 200, `Expected 200 on ${asset}`);
       assert.equal(res.headers.get("x-content-type-options"), "nosniff", `${asset} must include X-Content-Type-Options: nosniff`);
@@ -382,7 +382,7 @@ describe("Live HTTP security headers & SSR nonce compatibility (when server is r
     }
 
     // /_next/image optimizer must include baseline headers
-    const imgOptRes = await fetch(`${APP}/_next/image?url=%2Fimages%2Fproducts%2Fparacetamol-500.jpg&w=640&q=75`);
+    const imgOptRes = await fetch(`${APP}/_next/image?url=%2Fimages%2Fproducts%2Fpain-relief%2Fparacetamol-500mg-tablets.jpg&w=640&q=75`);
     assert.equal(imgOptRes.status, 200);
     assert.equal(imgOptRes.headers.get("x-content-type-options"), "nosniff");
     assert.equal(imgOptRes.headers.get("x-frame-options"), "DENY");

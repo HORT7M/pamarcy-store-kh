@@ -348,7 +348,7 @@ describe("URL, image, link, prescription & numeric type allowlists", () => {
     ]) {
       assert.equal(isSafeImageUrl(bad), false, `Should reject image URL: ${bad}`);
     }
-    assert.equal(isSafeImageUrl("/images/products/paracetamol-500.jpg"), true);
+    assert.equal(isSafeImageUrl("/images/products/pain-relief/paracetamol-500mg-tablets.jpg"), true);
     assert.equal(isSafeImageUrl("/api/files/uploads/products/550e8400-e29b-41d4-a716-446655440000.jpg"), true);
     assert.equal(isSafeImageUrl("https://res.cloudinary.com/demo/image/upload/v1/a.jpg"), true);
 

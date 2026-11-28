@@ -1,0 +1,63 @@
+{
+  "catalogData": {
+    "categories": {
+      "pain-relief": "ថ្នាំបំបាត់ការឈឺចាប់",
+      "vitamins-supplements": "វីតាមីន និងអាហារបំប៉ន",
+      "cold-flu": "ផ្តាសាយ និងគ្រុនផ្តាសាយ",
+      "digestive-health": "សុខភាពប្រព័ន្ធរំលាយអាហារ",
+      "first-aid": "សង្គ្រោះបឋម",
+      "skin-care": "ថែរក្សាស្បែក",
+      "medical-equipment": "ឧបករណ៍វេជ្ជសាស្ត្រ",
+      "personal-care": "ថែទាំផ្ទាល់ខ្លួន",
+      "prescription-medicines": "ថ្នាំតាមវេជ្ជបញ្ជា"
+    },
+    "paymentMethods": {
+      "KHQR": "KHQR (បាគង)",
+      "USDT": "USDT (Tether)",
+      "PAYPAL": "PayPal",
+      "CASH": "សាច់ប្រាក់"
+    },
+    "banners": {
+      "b1Title": "វីតាមីនសម្រាប់គ្រួសារទាំងមូល",
+      "b1Sub": "បញ្ចុះតម្លៃរហូតដល់ ២០% លើអាហារបំប៉នជ្រើសរើស",
+      "b2Title": "ពិគ្រោះជាមួយឱសថការីរបស់យើង",
+      "b2Sub": "ដំបូន្មានឥតគិតថ្លៃនៅហាង តាមទូរស័ព្ទ ឬ Telegram"
+    },
+    "roles": {
+      "SUPER_ADMIN": "អ្នកគ្រប់គ្រងជាន់ខ្ពស់",
+      "ADMIN": "អ្នកគ្រប់គ្រង",
+      "PHARMACIST": "ឱសថការី",
+      "CASHIER": "អ្នកគិតលុយ",
+      "INVENTORY_STAFF": "បុគ្គលិកស្តុក",
+      "CUSTOMER": "អតិថិជន"
+    },
+    "permissions": {
+      "dashboard_view": "មើលផ្ទាំងសង្ខេបគ្រប់គ្រង",
+      "medicines_read": "មើលបញ្ជីឱសថ",
+      "medicines_write": "បង្កើត / កែប្រែឱសថ",
+      "medicines_delete": "លុបឱសថ",
+      "categories_write": "គ្រប់គ្រងប្រភេទ និងម៉ាក",
+      "inventory_read": "មើលស្តុក ឡូត៍ និងថ្ងៃផុតកំណត់",
+      "inventory_write": "បញ្ចូល / ដក / កែតម្រូវស្តុក",
+      "suppliers_read": "មើលអ្នកផ្គត់ផ្គង់",
+      "suppliers_write": "គ្រប់គ្រងអ្នកផ្គត់ផ្គង់",
+      "purchases_read": "មើលការបញ្ជាទិញចូល",
+      "purchases_write": "បង្កើត / ទទួលការបញ្ជាទិញចូល",
+      "orders_read": "មើលការបញ្ជាទិញ",
+      "orders_write": "កែស្ថានភាព / រៀបចំការបញ្ជាទិញ",
+      "orders_cancel": "បោះបង់ការបញ្ជាទិញ",
+      "orders_refund": "សងប្រាក់វិញ",
+      "prescriptions_review": "ពិនិត្យវេជ្ជបញ្ជា",
+      "pos_use": "ប្រើប្រព័ន្ធលក់ POS",
+      "customers_read": "មើលអតិថិជន",
+      "customers_write": "កែប្រែ / ផ្អាកអតិថិជន",
+      "payments_read": "មើលការទូទាត់",
+      "discounts_write": "គ្រប់គ្រងលេខកូដបញ្ចុះតម្លៃ និងផ្ទាំងផ្សព្វផ្សាយ",
+      "reports_view": "មើល និងទាញយករបាយការណ៍",
+      "settings_manage": "គ្រប់គ្រងការកំណត់ហាង",
+      "settings_payments": "គ្រប់គ្រងការកំណត់ការទូទាត់",
+      "users_manage": "គ្រប់គ្រងគណនីបុគ្គលិក",
+      "audit_view": "មើលកំណត់ហេតុសកម្មភាព"
+    }
+  }
+}

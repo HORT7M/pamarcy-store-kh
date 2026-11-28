@@ -80,7 +80,7 @@ function makeBrowserReq(ip: string, ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X
 }
 
 function loadValidJpeg(): Uint8Array {
-  return readFileSync("public/images/products/paracetamol-500.jpg");
+  return readFileSync("public/images/products/pain-relief/paracetamol-500mg-tablets.jpg");
 }
 
 // ───────────────────── Unit Tests ─────────────────────

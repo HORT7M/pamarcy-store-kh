@@ -89,7 +89,7 @@ function makeValidPng(extraChunks: Buffer[] = [], width = 1, height = 1): Buffer
 
 /** Load a real JPEG fixture from public/images. */
 function loadRealJpeg(): Buffer {
-  return readFileSync("public/images/products/paracetamol-500.jpg");
+  return readFileSync("public/images/products/pain-relief/paracetamol-500mg-tablets.jpg");
 }
 
 /** Insert a JPEG marker segment right after SOI (FF D8). */
@@ -550,7 +550,7 @@ describe("Safe filename generation, isolated storage & filesystem hardening", ()
 
 describe("URL injection & prescription claim validation in Zod schemas", () => {
   it("blocks javascript:, data:, arbitrary hosts, and path traversal in imageUrl / link / prescriptionUrl", () => {
-    assert.equal(isSafeImageUrl("/images/products/paracetamol-500.jpg"), true);
+    assert.equal(isSafeImageUrl("/images/products/pain-relief/paracetamol-500mg-tablets.jpg"), true);
     assert.equal(isSafeImageUrl("/api/files/uploads/products/123e4567-e89b-42d3-a456-426614174000.jpg"), true);
     assert.equal(isSafeImageUrl("https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"), true);
 

@@ -1,0 +1,63 @@
+{
+  "catalogData": {
+    "categories": {
+      "pain-relief": "Antidouleurs",
+      "vitamins-supplements": "Vitamines et compléments",
+      "cold-flu": "Rhume et grippe",
+      "digestive-health": "Santé digestive",
+      "first-aid": "Premiers secours",
+      "skin-care": "Soins de la peau",
+      "medical-equipment": "Matériel médical",
+      "personal-care": "Hygiène et soins personnels",
+      "prescription-medicines": "Médicaments sur ordonnance"
+    },
+    "paymentMethods": {
+      "KHQR": "KHQR (Bakong)",
+      "USDT": "USDT (Tether)",
+      "PAYPAL": "PayPal",
+      "CASH": "Espèces"
+    },
+    "banners": {
+      "b1Title": "Des vitamines pour toute la famille",
+      "b1Sub": "-20 % sur une sélection de compléments",
+      "b2Title": "Parlez à nos pharmaciens",
+      "b2Sub": "Conseil gratuit en pharmacie, par téléphone ou sur Telegram"
+    },
+    "roles": {
+      "SUPER_ADMIN": "Super administrateur",
+      "ADMIN": "Administrateur",
+      "PHARMACIST": "Pharmacien",
+      "CASHIER": "Caissier",
+      "INVENTORY_STAFF": "Gestionnaire de stock",
+      "CUSTOMER": "Client"
+    },
+    "permissions": {
+      "dashboard_view": "Accéder au tableau de bord",
+      "medicines_read": "Consulter les médicaments",
+      "medicines_write": "Créer / modifier les médicaments",
+      "medicines_delete": "Supprimer les médicaments",
+      "categories_write": "Gérer les catégories et marques",
+      "inventory_read": "Consulter stock, lots et péremptions",
+      "inventory_write": "Entrées / sorties / ajustements",
+      "suppliers_read": "Consulter les fournisseurs",
+      "suppliers_write": "Gérer les fournisseurs",
+      "purchases_read": "Consulter les bons de commande",
+      "purchases_write": "Créer / réceptionner les achats",
+      "orders_read": "Consulter les commandes",
+      "orders_write": "Modifier le statut / préparer",
+      "orders_cancel": "Annuler les commandes",
+      "orders_refund": "Rembourser les paiements",
+      "prescriptions_review": "Valider les ordonnances",
+      "pos_use": "Utiliser la caisse (POS)",
+      "customers_read": "Consulter les clients",
+      "customers_write": "Modifier / suspendre les clients",
+      "payments_read": "Consulter les paiements",
+      "discounts_write": "Gérer codes promo et bannières",
+      "reports_view": "Consulter et exporter les rapports",
+      "settings_manage": "Gérer les paramètres de la pharmacie",
+      "settings_payments": "Gérer la configuration des paiements",
+      "users_manage": "Gérer les comptes du personnel",
+      "audit_view": "Consulter le journal d'audit"
+    }
+  }
+}

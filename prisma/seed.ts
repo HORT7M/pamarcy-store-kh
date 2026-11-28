@@ -152,7 +152,7 @@ async function main() {
           descriptionEn: m.desc, descriptionKm: m.descKm, categoryId: catIds[m.cat], brandId: brandIds[m.brand], manufacturer: BRANDS.find((b) => b[0] === m.brand)?.[2],
           activeIngredients: m.ingredients, dosageForm: m.form, strength: m.strength, dosageInfo: m.dosage, usageInstructions: m.usage, warnings: m.warn,
           unit: m.unit ?? "box", price: m.price, compareAtPrice: idx % 6 === 0 ? Math.round(m.price * 1.2 * 100) / 100 : null, costPrice: m.cost,
-          imageUrl: `/images/products/${m.img}.jpg`, images: [`/images/products/${m.img}.jpg`], requiresPrescription: !!m.rx, tracksExpiry: m.expiry !== false, isFeatured: !!m.featured,
+          imageUrl: `/images/products/${m.cat}/${m.img}.jpg`, images: [`/images/products/${m.cat}/${m.img}.jpg`], requiresPrescription: !!m.rx, tracksExpiry: m.expiry !== false, isFeatured: !!m.featured,
           inventory: { create: { minStock: m.price > 20 ? 3 : 15, location: `Shelf ${String.fromCharCode(65 + (idx % 6))}-${(idx % 10) + 1}` } },
           createdAt: new Date(Date.now() - (MEDICINES.length - idx) * 3 * DAY),
         },
@@ -201,8 +201,8 @@ async function main() {
   if (!(await prisma.banner.count())) {
     await prisma.banner.createMany({
       data: [
-        { titleEn: "Vitamins for the whole family", titleKm: "វីតាមីនសម្រាប់គ្រួសារទាំងមូល", subtitleEn: "Up to 20% off selected supplements", subtitleKm: "បញ្ចុះតម្លៃរហូតដល់ ២០% លើអាហារបំប៉នជ្រើសរើស", imageUrl: "/images/banners/vitamins-banner.jpg", link: "/shop?category=vitamins-supplements", sortOrder: 1 },
-        { titleEn: "Talk to our pharmacists", titleKm: "ពិគ្រោះជាមួយឱសថការីរបស់យើង", subtitleEn: "Free advice in store, by phone or Telegram", subtitleKm: "ដំបូន្មានឥតគិតថ្លៃនៅហាង តាមទូរស័ព្ទ ឬ Telegram", imageUrl: "/images/banners/pharmacist.jpg", link: "/shop?category=prescription-medicines", sortOrder: 2 },
+        { titleEn: "Vitamins for the whole family", titleKm: "វីតាមីនសម្រាប់គ្រួសារទាំងមូល", subtitleEn: "Up to 20% off selected supplements", subtitleKm: "បញ្ចុះតម្លៃរហូតដល់ ២០% លើអាហារបំប៉នជ្រើសរើស", imageUrl: "/images/banners/banner-promo-vitamins.jpg", link: "/shop?category=vitamins-supplements", sortOrder: 1 },
+        { titleEn: "Talk to our pharmacists", titleKm: "ពិគ្រោះជាមួយឱសថការីរបស់យើង", subtitleEn: "Free advice in store, by phone or Telegram", subtitleKm: "ដំបូន្មានឥតគិតថ្លៃនៅហាង តាមទូរស័ព្ទ ឬ Telegram", imageUrl: "/images/banners/banner-promo-pharmacist.jpg", link: "/shop?category=prescription-medicines", sortOrder: 2 },
       ],
     });
   }

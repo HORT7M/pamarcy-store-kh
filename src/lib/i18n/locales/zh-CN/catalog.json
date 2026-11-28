@@ -1,0 +1,63 @@
+{
+  "catalogData": {
+    "categories": {
+      "pain-relief": "止痛药",
+      "vitamins-supplements": "维生素与保健品",
+      "cold-flu": "感冒与流感",
+      "digestive-health": "消化健康",
+      "first-aid": "急救用品",
+      "skin-care": "皮肤护理",
+      "medical-equipment": "医疗器械",
+      "personal-care": "个人护理",
+      "prescription-medicines": "处方药"
+    },
+    "paymentMethods": {
+      "KHQR": "KHQR（Bakong）",
+      "USDT": "USDT（泰达币）",
+      "PAYPAL": "PayPal",
+      "CASH": "现金"
+    },
+    "banners": {
+      "b1Title": "全家人的维生素",
+      "b1Sub": "精选保健品低至八折",
+      "b2Title": "咨询我们的药剂师",
+      "b2Sub": "到店、电话或 Telegram 免费咨询"
+    },
+    "roles": {
+      "SUPER_ADMIN": "超级管理员",
+      "ADMIN": "管理员",
+      "PHARMACIST": "药剂师",
+      "CASHIER": "收银员",
+      "INVENTORY_STAFF": "库管员",
+      "CUSTOMER": "顾客"
+    },
+    "permissions": {
+      "dashboard_view": "查看管理仪表盘",
+      "medicines_read": "查看药品",
+      "medicines_write": "创建 / 编辑药品",
+      "medicines_delete": "删除药品",
+      "categories_write": "管理分类与品牌",
+      "inventory_read": "查看库存、批次、有效期",
+      "inventory_write": "入库 / 出库 / 调整",
+      "suppliers_read": "查看供应商",
+      "suppliers_write": "管理供应商",
+      "purchases_read": "查看采购单",
+      "purchases_write": "创建 / 收货采购单",
+      "orders_read": "查看订单",
+      "orders_write": "更新订单状态 / 出库",
+      "orders_cancel": "取消订单",
+      "orders_refund": "退款",
+      "prescriptions_review": "审核处方订单",
+      "pos_use": "使用收银台 POS",
+      "customers_read": "查看顾客",
+      "customers_write": "编辑 / 停用顾客",
+      "payments_read": "查看支付记录",
+      "discounts_write": "管理优惠码与横幅",
+      "reports_view": "查看与导出报表",
+      "settings_manage": "管理店铺设置",
+      "settings_payments": "管理支付配置",
+      "users_manage": "管理员工账户",
+      "audit_view": "查看审计日志"
+    }
+  }
+}

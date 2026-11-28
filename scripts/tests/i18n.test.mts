@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import {
   DEFAULT_LOCALE,
@@ -8,6 +8,7 @@ import {
   isLocale,
   LOCALES,
   LOCALE_META,
+  LOCALE_NAMESPACE_FILES,
   normalizeLocale,
   type Dict,
 } from "../../src/lib/i18n/dictionaries.ts";
@@ -46,20 +47,53 @@ function placeholders(str: string): string[] {
 }
 
 describe("i18n multilingual support (km, en, vi, zh-CN, fr)", () => {
-  it("loads all 5 locale JSON files with exact key parity and non-empty strings", () => {
+  it("loads all 5 modular locale directories with exact namespace, file, and key parity", () => {
     assert.deepEqual([...LOCALES], ["km", "en", "vi", "zh-CN", "fr"]);
     assert.equal(DEFAULT_LOCALE, "km");
 
+    const listJsonFiles = (dir: string, rel = ""): string[] => {
+      const out: string[] = [];
+      for (const ent of readdirSync(dir, { withFileTypes: true })) {
+        const nextRel = rel ? `${rel}/${ent.name}` : ent.name;
+        if (ent.isDirectory()) out.push(...listJsonFiles(path.join(dir, ent.name), nextRel));
+        else if (ent.name.endsWith(".json")) out.push(nextRel);
+      }
+      return out.sort();
+    };
+
+    const expectedFiles = [...LOCALE_NAMESPACE_FILES].sort();
     const enFlat = flatten(dictionaries.en as unknown as Record<string, unknown>);
     const enKeys = Object.keys(enFlat).sort();
     assert.ok(enKeys.length >= 1150, `Expected comprehensive dictionary, got ${enKeys.length} keys`);
 
     for (const loc of LOCALES) {
-      const filePath = path.join(process.cwd(), "src/lib/i18n/locales", `${loc}.json`);
-      const parsed = JSON.parse(readFileSync(filePath, "utf8")) as Record<string, unknown>;
-      const flat = flatten(parsed);
+      const localeDir = path.join(process.cwd(), "src/lib/i18n/locales", loc);
+      assert.ok(existsSync(localeDir), `Missing locale directory: ${localeDir}`);
+      assert.deepEqual(listJsonFiles(localeDir), expectedFiles, `Namespace JSON file mismatch for locale ${loc}`);
+
+      const merged: Record<string, unknown> = {};
+      for (const relFile of LOCALE_NAMESPACE_FILES) {
+        const enNs = flatten(
+          JSON.parse(readFileSync(path.join(process.cwd(), "src/lib/i18n/locales/en", relFile), "utf8")) as Record<string, unknown>,
+        );
+        const locObj = JSON.parse(readFileSync(path.join(localeDir, relFile), "utf8")) as Record<string, unknown>;
+        const locNs = flatten(locObj);
+        assert.deepEqual(
+          Object.keys(locNs).sort(),
+          Object.keys(enNs).sort(),
+          `Key mismatch in ${loc}/${relFile}`,
+        );
+        Object.assign(merged, locObj);
+      }
+
+      const flat = flatten(merged);
       const keys = Object.keys(flat).sort();
-      assert.deepEqual(keys, enKeys, `Key mismatch for locale ${loc}`);
+      assert.deepEqual(keys, enKeys, `Composed key mismatch for locale ${loc}`);
+      assert.deepEqual(
+        flatten(dictionaries[loc] as unknown as Record<string, unknown>),
+        flat,
+        `Runtime dictionary mismatch with JSON files for locale ${loc}`,
+      );
       assert.ok(LOCALE_META[loc]?.nativeName, `Missing LOCALE_META for ${loc}`);
 
       for (const k of enKeys) {

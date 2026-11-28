@@ -1,0 +1,63 @@
+{
+  "catalogData": {
+    "categories": {
+      "pain-relief": "Giảm đau",
+      "vitamins-supplements": "Vitamin & Thực phẩm bổ sung",
+      "cold-flu": "Cảm lạnh & Cúm",
+      "digestive-health": "Sức khỏe tiêu hóa",
+      "first-aid": "Sơ cứu",
+      "skin-care": "Chăm sóc da",
+      "medical-equipment": "Thiết bị y tế",
+      "personal-care": "Chăm sóc cá nhân",
+      "prescription-medicines": "Thuốc kê đơn"
+    },
+    "paymentMethods": {
+      "KHQR": "KHQR (Bakong)",
+      "USDT": "USDT (Tether)",
+      "PAYPAL": "PayPal",
+      "CASH": "Tiền mặt"
+    },
+    "banners": {
+      "b1Title": "Vitamin cho cả gia đình",
+      "b1Sub": "Giảm đến 20% cho thực phẩm bổ sung chọn lọc",
+      "b2Title": "Trò chuyện với dược sĩ của chúng tôi",
+      "b2Sub": "Tư vấn miễn phí tại cửa hàng, qua điện thoại hoặc Telegram"
+    },
+    "roles": {
+      "SUPER_ADMIN": "Quản trị cấp cao",
+      "ADMIN": "Quản trị viên",
+      "PHARMACIST": "Dược sĩ",
+      "CASHIER": "Thu ngân",
+      "INVENTORY_STAFF": "Nhân viên kho",
+      "CUSTOMER": "Khách hàng"
+    },
+    "permissions": {
+      "dashboard_view": "Xem bảng điều khiển quản trị",
+      "medicines_read": "Xem danh sách thuốc",
+      "medicines_write": "Tạo / sửa thuốc",
+      "medicines_delete": "Xóa thuốc",
+      "categories_write": "Quản lý danh mục & thương hiệu",
+      "inventory_read": "Xem tồn kho, lô hàng, hạn dùng",
+      "inventory_write": "Nhập / xuất / điều chỉnh kho",
+      "suppliers_read": "Xem nhà cung cấp",
+      "suppliers_write": "Quản lý nhà cung cấp",
+      "purchases_read": "Xem đơn mua hàng",
+      "purchases_write": "Tạo / nhận đơn mua hàng",
+      "orders_read": "Xem đơn hàng",
+      "orders_write": "Cập nhật trạng thái / xuất hàng",
+      "orders_cancel": "Hủy đơn hàng",
+      "orders_refund": "Hoàn tiền thanh toán",
+      "prescriptions_review": "Duyệt đơn hàng kê đơn",
+      "pos_use": "Sử dụng máy bán hàng POS",
+      "customers_read": "Xem khách hàng",
+      "customers_write": "Sửa / đình chỉ khách hàng",
+      "payments_read": "Xem thanh toán",
+      "discounts_write": "Quản lý mã giảm giá & banner",
+      "reports_view": "Xem & xuất báo cáo",
+      "settings_manage": "Quản lý cài đặt cửa hàng",
+      "settings_payments": "Quản lý cấu hình thanh toán",
+      "users_manage": "Quản lý tài khoản nhân viên",
+      "audit_view": "Xem nhật ký kiểm toán"
+    }
+  }
+}

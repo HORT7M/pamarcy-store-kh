@@ -225,7 +225,7 @@ describe("Context-aware URL, navigation, image & payment link sanitization", () 
 
   it("enforces strict allowlists for image sources, prescriptions, PayPal URLs, explorers, tel, and mailto", () => {
     // Images
-    assert.equal(safeImageSrc("/images/products/paracetamol-500.jpg"), "/images/products/paracetamol-500.jpg");
+    assert.equal(safeImageSrc("/images/products/pain-relief/paracetamol-500mg-tablets.jpg"), "/images/products/pain-relief/paracetamol-500mg-tablets.jpg");
     assert.equal(safeImageSrc("/api/files/uploads/products/1234-abcd.webp"), "/api/files/uploads/products/1234-abcd.webp");
     assert.equal(safeImageSrc("https://res.cloudinary.com/demo/image/upload/v1/med.jpg"), "https://res.cloudinary.com/demo/image/upload/v1/med.jpg");
     assert.equal(safeImageSrc("https://evil.example.com/pic.jpg"), null);
@@ -290,7 +290,7 @@ describe("Zod input validation XSS defenses (preserving legitimate formatting)",
       bannerSchema.safeParse({
         titleEn: "Promo",
         titleKm: "ប្រូម៉ូសិន",
-        imageUrl: "/images/banners/vitamins-banner.jpg",
+        imageUrl: "/images/banners/banner-promo-vitamins.jpg",
         link: "javascript:alert(1)",
       }).success,
       false,
@@ -358,7 +358,7 @@ describe("Zod input validation XSS defenses (preserving legitimate formatting)",
       costPrice: 1.2,
       descriptionEn: "Adults & children > 12 years:\nTake 1–2 tablets every 4–6 hours.\nDo not use if age < 12 without Dr. O'Connor's advice.",
       warnings: "Keep out of reach of children.\nDo not exceed 4g/day.",
-      imageUrl: "/images/products/paracetamol-500.jpg",
+      imageUrl: "/images/products/pain-relief/paracetamol-500mg-tablets.jpg",
     });
     assert.equal(res.success, true);
     if (res.success) {

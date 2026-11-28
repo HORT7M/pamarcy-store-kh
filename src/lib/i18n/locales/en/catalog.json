@@ -1,0 +1,63 @@
+{
+  "catalogData": {
+    "categories": {
+      "pain-relief": "Pain Relief",
+      "vitamins-supplements": "Vitamins & Supplements",
+      "cold-flu": "Cold & Flu",
+      "digestive-health": "Digestive Health",
+      "first-aid": "First Aid",
+      "skin-care": "Skin Care",
+      "medical-equipment": "Medical Equipment",
+      "personal-care": "Personal Care",
+      "prescription-medicines": "Prescription Medicines"
+    },
+    "paymentMethods": {
+      "KHQR": "KHQR (Bakong)",
+      "USDT": "USDT (Tether)",
+      "PAYPAL": "PayPal",
+      "CASH": "Cash"
+    },
+    "banners": {
+      "b1Title": "Vitamins for the whole family",
+      "b1Sub": "Up to 20% off selected supplements",
+      "b2Title": "Talk to our pharmacists",
+      "b2Sub": "Free advice in store, by phone or Telegram"
+    },
+    "roles": {
+      "SUPER_ADMIN": "Super Admin",
+      "ADMIN": "Admin",
+      "PHARMACIST": "Pharmacist",
+      "CASHIER": "Cashier",
+      "INVENTORY_STAFF": "Inventory Staff",
+      "CUSTOMER": "Customer"
+    },
+    "permissions": {
+      "dashboard_view": "View admin dashboard",
+      "medicines_read": "View medicines",
+      "medicines_write": "Create / edit medicines",
+      "medicines_delete": "Delete medicines",
+      "categories_write": "Manage categories & brands",
+      "inventory_read": "View inventory, batches, expiry",
+      "inventory_write": "Stock in / out / adjust",
+      "suppliers_read": "View suppliers",
+      "suppliers_write": "Manage suppliers",
+      "purchases_read": "View purchase orders",
+      "purchases_write": "Create / receive purchase orders",
+      "orders_read": "View orders",
+      "orders_write": "Update order status / fulfil",
+      "orders_cancel": "Cancel orders",
+      "orders_refund": "Refund payments",
+      "prescriptions_review": "Review prescription orders",
+      "pos_use": "Use point of sale",
+      "customers_read": "View customers",
+      "customers_write": "Edit / suspend customers",
+      "payments_read": "View payments",
+      "discounts_write": "Manage discount codes & banners",
+      "reports_view": "View & export reports",
+      "settings_manage": "Manage store settings",
+      "settings_payments": "Manage payment configuration",
+      "users_manage": "Manage staff accounts",
+      "audit_view": "View audit logs"
+    }
+  }
+}
