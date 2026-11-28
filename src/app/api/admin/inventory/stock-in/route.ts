@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireStaff } from "@/lib/auth/session";
 import { stockInSchema } from "@/lib/validators";
 import { pickAllowed, STOCK_IN_FIELDS } from "@/lib/allowlist";
-import { stockIn } from "@/lib/services/inventory";
+import { sellableCutoff, stockIn } from "@/lib/services/inventory";
 import { parseDateInput } from "@/lib/date";
 import { audit } from "@/lib/audit";
 import { badRequest } from "@/lib/errors";
@@ -19,7 +19,7 @@ export const POST = apiHandler(async (req) => {
     if (!sup) throw badRequest("Supplier not found");
   }
   if (med.tracksExpiry && !b.expiryDate) throw badRequest("Expiry date is required for this medicine");
-  if (b.expiryDate && parseDateInput(b.expiryDate) <= new Date()) throw badRequest("Cannot receive stock that is already expired");
+  if (b.expiryDate && parseDateInput(b.expiryDate) < sellableCutoff()) throw badRequest("Cannot receive stock that is already expired");
   const batchId = await prisma.$transaction((tx) =>
     stockIn(tx, {
       ...fields,

@@ -17,7 +17,7 @@ export const GET = apiHandler(async (req) => {
     const all = await prisma.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, take: 2000, include: { user: { select: { name: true } } } });
     const matched = all.filter((l) =>
       l.action.toLowerCase().includes(needle) ||
-      l.entityId === p.q ||
+      (l.entityId?.toLowerCase().includes(needle) ?? false) ||
       (l.user?.name.toLowerCase().includes(needle) ?? false),
     );
     return { total: matched.length, page: pg.page, pageSize: pg.pageSize, items: matched.slice(pg.skip, pg.skip + pg.take) };

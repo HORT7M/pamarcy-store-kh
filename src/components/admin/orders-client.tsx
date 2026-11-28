@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Search, FileWarning } from "lucide-react";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +24,7 @@ type OrderRow = {
 const STATUSES = ["", "PENDING", "CONFIRMED", "PROCESSING", "READY_FOR_DELIVERY", "SHIPPING", "DELIVERED", "CANCELLED"];
 
 export function OrdersClient() {
-  const { money, t, tryT } = useI18n();
+  const { money, t, tryT, tError } = useI18n();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [channel, setChannel] = useState("");
@@ -39,8 +40,8 @@ export function OrdersClient() {
     if (channel) sp.set("channel", channel);
     if (payment) sp.set("payment", payment);
     if (rxOnly) sp.set("rx", "pending");
-    api<typeof data>(`/api/admin/orders?${sp}`).then(setData);
-  }, [q, status, channel, payment, rxOnly, page]);
+    api<typeof data>(`/api/admin/orders?${sp}`).then(setData).catch((e) => toast.error(tError((e as Error).message)));
+  }, [q, status, channel, payment, rxOnly, page, tError]);
   useEffect(() => { const id = setTimeout(load, 200); return () => clearTimeout(id); }, [load]);
 
   const sel = "h-9 rounded-md border bg-white px-3 text-sm";

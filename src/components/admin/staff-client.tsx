@@ -31,7 +31,7 @@ export function StaffClient({ currentUserId }: { currentUserId: string }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", role: "PHARMACIST" as RoleKey, position: "", licenseNo: "", password: "", status: "ACTIVE" as "ACTIVE" | "SUSPENDED" });
   const [busy, setBusy] = useState(false);
 
-  const load = useCallback(() => { api<{ items: StaffRow[] }>("/api/admin/staff").then((r) => setItems(r.items)); }, []);
+  const load = useCallback(() => { api<{ items: StaffRow[] }>("/api/admin/staff").then((r) => setItems(r.items)).catch((e) => toast.error(tError((e as Error).message))); }, [tError]);
   useEffect(load, [load]);
 
   function open(s?: StaffRow) {

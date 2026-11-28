@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Download, FileSpreadsheet, FileText, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +31,7 @@ const PRESETS: Preset[] = [
 type ReportDto = { title: string; columns: string[]; rows: (string | number)[][]; summary?: [string, string | number][] };
 
 export function ReportsClient() {
-  const { t, tryT } = useI18n();
+  const { t, tryT, tError } = useI18n();
   const todayStr = dayKey(new Date());
   const [presetKey, setPresetKey] = useState("sales-day");
   const [from, setFrom] = useState(dayKey(addDays(new Date(), -29)));
@@ -58,12 +59,29 @@ export function ReportsClient() {
   );
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    api<ReportDto>(queryString()).then(setReport).finally(() => setLoading(false));
-  }, [queryString]);
+    api<ReportDto>(queryString())
+      .then((r) => {
+        if (!cancelled) setReport(r);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setReport(null);
+          toast.error(tError((e as Error).message));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [queryString, tError]);
 
   async function exportPdf() {
     if (!report) return;
+    try {
     const { jsPDF } = await import("jspdf");
     const autoTable = (await import("jspdf-autotable")).default;
     const doc = new jsPDF({ orientation: report.columns.length > 6 ? "landscape" : "portrait" });
@@ -87,6 +105,9 @@ export function ReportsClient() {
       headStyles: { fillColor: [15, 157, 88] },
     });
     doc.save(`pamarcy-${presetKey}-${from}-${to}.pdf`);
+    } catch (e) {
+      toast.error(tError((e as Error).message));
+    }
   }
 
   const chartData =
@@ -118,7 +139,11 @@ export function ReportsClient() {
         subtitle={t("reportsAdmin.subtitle")}
         actions={
           <>
-            <Button asChild variant="outline" disabled={!report}><a href={queryString("csv")}><FileSpreadsheet /> {t("reportsAdmin.exportCsv")}</a></Button>
+            {report ? (
+              <Button asChild variant="outline"><a href={queryString("csv")}><FileSpreadsheet /> {t("reportsAdmin.exportCsv")}</a></Button>
+            ) : (
+              <Button variant="outline" disabled><FileSpreadsheet /> {t("reportsAdmin.exportCsv")}</Button>
+            )}
             <Button onClick={exportPdf} disabled={!report}><FileText /> {t("reportsAdmin.exportPdf")}</Button>
           </>
         }

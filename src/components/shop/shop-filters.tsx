@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { Button } from "@/components/ui/button";
@@ -14,13 +14,23 @@ export function ShopFilters({ categories, brands }: { categories: { slug: string
   const router = useRouter();
   const sp = useSearchParams();
   const [open, setOpen] = useState(false);
-  const [min, setMin] = useState(sp.get("min") ?? "");
-  const [max, setMax] = useState(sp.get("max") ?? "");
+  const urlMin = sp.get("min") ?? "";
+  const urlMax = sp.get("max") ?? "";
+  const [min, setMin] = useState(urlMin);
+  const [max, setMax] = useState(urlMax);
   const selectedBrands = (sp.get("brand") ?? "").split(",").filter(Boolean);
+
+  useEffect(() => {
+    setMin(urlMin);
+    setMax(urlMax);
+  }, [urlMin, urlMax]);
 
   function update(patch: Record<string, string | null>) {
     const u = new URLSearchParams(sp.toString());
-    for (const [k, v] of Object.entries(patch)) (v ? u.set(k, v) : u.delete(k));
+    for (const [k, v] of Object.entries(patch)) {
+      if (v) u.set(k, v);
+      else u.delete(k);
+    }
     u.delete("page");
     router.push(`/shop?${u}`);
   }

@@ -6,7 +6,7 @@ import { roleHas } from "@/lib/auth/permissions";
 import { adminMedicinesQuerySchema, medicineSchema } from "@/lib/validators";
 import { MEDICINE_WRITE_FIELDS, pickAllowed } from "@/lib/allowlist";
 import { audit } from "@/lib/audit";
-import { stockIn, getAvailability } from "@/lib/services/inventory";
+import { stockIn, getAvailability, sellableCutoff } from "@/lib/services/inventory";
 import { parseDateInput } from "@/lib/date";
 import { badRequest, forbidden } from "@/lib/errors";
 import { slugify } from "@/lib/slug";
@@ -22,10 +22,25 @@ export const GET = apiHandler(async (req) => {
   if (p.status === "inactive") where.isActive = false;
   if (p.rx) where.requiresPrescription = p.rx === "rx";
   if (p.status === "low" || p.status === "out") {
+    const cutoff = sellableCutoff();
     const rows =
       p.status === "out"
-        ? await prisma.$queryRaw<{ medicineId: string }[]>`SELECT "medicineId" FROM "Inventory" WHERE "quantity" - "reserved" <= 0`
-        : await prisma.$queryRaw<{ medicineId: string }[]>`SELECT "medicineId" FROM "Inventory" WHERE "quantity" - "reserved" <= "minStock"`;
+        ? await prisma.$queryRaw<{ medicineId: string }[]>`
+            SELECT m.id AS "medicineId"
+            FROM "Medicine" m
+            LEFT JOIN "MedicineBatch" b ON b."medicineId" = m.id
+            WHERE m."deletedAt" IS NULL
+            GROUP BY m.id
+            HAVING COALESCE(SUM(CASE WHEN b."expiryDate" IS NULL OR b."expiryDate" >= ${cutoff} THEN GREATEST(0, b.quantity - b.reserved) ELSE 0 END), 0) <= 0`
+        : await prisma.$queryRaw<{ medicineId: string }[]>`
+            SELECT m.id AS "medicineId"
+            FROM "Medicine" m
+            LEFT JOIN "Inventory" i ON i."medicineId" = m.id
+            LEFT JOIN "MedicineBatch" b ON b."medicineId" = m.id
+            WHERE m."deletedAt" IS NULL
+            GROUP BY m.id, i."minStock"
+            HAVING COALESCE(SUM(CASE WHEN b."expiryDate" IS NULL OR b."expiryDate" >= ${cutoff} THEN GREATEST(0, b.quantity - b.reserved) ELSE 0 END), 0) > 0
+               AND COALESCE(SUM(CASE WHEN b."expiryDate" IS NULL OR b."expiryDate" >= ${cutoff} THEN GREATEST(0, b.quantity - b.reserved) ELSE 0 END), 0) <= COALESCE(i."minStock", 0)`;
     where.id = { in: rows.map((r) => r.medicineId) };
   }
   const [total, items] = await Promise.all([
@@ -54,7 +69,7 @@ export const POST = apiHandler(async (req) => {
   }
   if (initialStock) {
     if (data.tracksExpiry && !initialStock.expiryDate) throw badRequest("Expiry date is required for the opening batch");
-    if (initialStock.expiryDate && parseDateInput(initialStock.expiryDate) <= new Date()) {
+    if (initialStock.expiryDate && parseDateInput(initialStock.expiryDate) < sellableCutoff()) {
       throw badRequest("Opening batch cannot already be expired");
     }
   }

@@ -15,11 +15,12 @@ export const GET = apiHandler(async (req) => {
   });
   // Supplier contactName, phone, email, taxId are AES-256-GCM encrypted at rest
   const needle = q?.trim().toLowerCase();
+  const phoneNeedle = q ? q.replace(/[\s\-()]/g, "").replace(/^0/, "").toLowerCase() : "";
   const items = needle
     ? all.filter((s) =>
         s.name.toLowerCase().includes(needle) ||
         (s.contactName?.toLowerCase().includes(needle) ?? false) ||
-        (s.phone?.toLowerCase().includes(needle) ?? false) ||
+        (phoneNeedle ? (s.phone?.toLowerCase().includes(phoneNeedle) ?? false) : false) ||
         (s.email?.toLowerCase().includes(needle) ?? false) ||
         (s.taxId?.toLowerCase().includes(needle) ?? false),
       )

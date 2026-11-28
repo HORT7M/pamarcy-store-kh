@@ -43,6 +43,7 @@ async function logTx(tx: Tx, paymentId: string, d: { type: Prisma.PaymentTransac
 export type InitiateOptions = { method: PaymentMethodCode; currency?: "USD" | "KHR"; network?: UsdtNetworkCode; channel: "online" | "pos" };
 
 export async function initiatePayment(orderId: string, opts: InitiateOptions, actorUserId: string | null) {
+  void actorUserId;
   const order = await prisma.order.findUnique({ where: { id: orderId }, include: { payments: true } });
   if (!order) throw notFound("Order not found");
   if ((opts.channel === "pos" && order.channel !== "POS") || (opts.channel === "online" && order.channel !== "ONLINE")) {
@@ -126,7 +127,8 @@ export async function initiatePayment(orderId: string, opts: InitiateOptions, ac
       data: { reference, orderId, methodId: method.id, amountUsd: total, currency: "USD", amount: total, expiresAt: new Date(Date.now() + 3 * 3600_000) },
     });
     try {
-      const pp = await createPaypalOrder({ reference, orderNumber: order.number, amountUsd: total.toFixed(2), brandName: settings.storeNameEn, returnUrl: `${back}?paypal=return${guestQs}`, cancelUrl: `${back}?paypal=cancel${guestQs}` });
+      const paypalBrand = ((method.config as { brandName?: string } | null)?.brandName ?? "").trim() || settings.storeNameEn;
+      const pp = await createPaypalOrder({ reference, orderNumber: order.number, amountUsd: total.toFixed(2), brandName: paypalBrand, returnUrl: `${back}?paypal=return${guestQs}`, cancelUrl: `${back}?paypal=cancel${guestQs}` });
       const approve = approvalUrl(pp);
       const updated = await prisma.payment.update({ where: { id: p.id }, data: { providerRef: pp.id, qrString: approve } });
       await logTx(prisma, p.id, { type: "CREATE", status: "ok", externalId: pp.id, message: `PayPal order ${pp.id} created`, raw: pp });

@@ -20,10 +20,10 @@ type InvRow = {
 };
 type Batch = { id: string; batchNumber: string; lotNumber: string | null; expiryDate: string | null; quantity: number; reserved: number; costPrice: string; supplier: { name: string } | null };
 
-export function InventoryClient({ medicines, suppliers, canWrite }: { medicines: { id: string; nameEn: string; sku: string; costPrice: string; tracksExpiry: boolean }[]; suppliers: { id: string; name: string }[]; canWrite: boolean }) {
+export function InventoryClient({ medicines, suppliers, canWrite, initialQuery = "" }: { medicines: { id: string; nameEn: string; sku: string; costPrice: string; tracksExpiry: boolean }[]; suppliers: { id: string; name: string }[]; canWrite: boolean; initialQuery?: string }) {
   const { locale, money, t, tError } = useI18n();
   const km = locale === "km";
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(initialQuery);
   const [filter, setFilter] = useState<"all" | "low" | "out" | "expired">("all");
   const [page, setPage] = useState(1);
   const [data, setData] = useState<{ total: number; pageSize: number; items: InvRow[]; totals: { costValue: number; retailValue: number; units: number; low: number; expiredUnits: number } } | null>(null);
@@ -38,15 +38,19 @@ export function InventoryClient({ medicines, suppliers, canWrite }: { medicines:
   const load = useCallback(() => {
     const sp = new URLSearchParams({ page: String(page), pageSize: "25", filter });
     if (q) sp.set("q", q);
-    api<typeof data>(`/api/admin/inventory?${sp}`).then(setData);
-  }, [q, filter, page]);
+    api<typeof data>(`/api/admin/inventory?${sp}`)
+      .then(setData)
+      .catch((e) => toast.error(tError((e as Error).message)));
+  }, [q, filter, page, tError]);
 
   useEffect(() => { const id = setTimeout(load, 200); return () => clearTimeout(id); }, [load]);
 
   function openBatches(row: InvRow) {
     setBatchMed(row);
     setBatches([]);
-    api<{ batches: Batch[] }>(`/api/admin/inventory/batches?medicineId=${row.id}`).then((r) => setBatches(r.batches));
+    api<{ batches: Batch[] }>(`/api/admin/inventory/batches?medicineId=${row.id}`)
+      .then((r) => setBatches(r.batches))
+      .catch((e) => toast.error(tError((e as Error).message)));
   }
 
   async function submitStockIn(e: React.FormEvent) {
@@ -173,7 +177,7 @@ export function InventoryClient({ medicines, suppliers, canWrite }: { medicines:
               <div className="space-y-1"><Label>{t("inventoryAdmin.lotNumber")}</Label><Input value={inForm.lotNumber} onChange={(e) => setInForm({ ...inForm, lotNumber: e.target.value })} /></div>
               <div className="space-y-1"><Label>{t("common.quantity")} *</Label><Input required type="number" min={1} value={inForm.quantity} onChange={(e) => setInForm({ ...inForm, quantity: e.target.value })} /></div>
               <div className="space-y-1"><Label>{t("inventoryAdmin.unitCostUsd")} *</Label><Input required type="number" min={0} step="0.01" value={inForm.costPrice} onChange={(e) => setInForm({ ...inForm, costPrice: e.target.value })} /></div>
-              <div className="space-y-1"><Label>{t("inventoryAdmin.expiryDate")} {medicines.find((m) => m.id === inForm.medicineId)?.tracksExpiry ? "*" : ""}</Label><Input type="date" value={inForm.expiryDate} onChange={(e) => setInForm({ ...inForm, expiryDate: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{t("inventoryAdmin.expiryDate")} {medicines.find((m) => m.id === inForm.medicineId)?.tracksExpiry ? "*" : ""}</Label><Input type="date" required={!!medicines.find((m) => m.id === inForm.medicineId)?.tracksExpiry} value={inForm.expiryDate} onChange={(e) => setInForm({ ...inForm, expiryDate: e.target.value })} /></div>
               <div className="space-y-1"><Label>{t("inventoryAdmin.manufactureDate")}</Label><Input type="date" value={inForm.manufactureDate} onChange={(e) => setInForm({ ...inForm, manufactureDate: e.target.value })} /></div>
             </div>
             <div className="space-y-1">
@@ -216,7 +220,7 @@ export function InventoryClient({ medicines, suppliers, canWrite }: { medicines:
                     <td className="py-2 text-right text-xs">${Number(b.costPrice).toFixed(2)}</td>
                     {canWrite && (
                       <td className="py-2 text-right">
-                        <Button size="sm" variant="outline" onClick={() => { setAdjusting(b); setAdjForm({ mode: isExp ? "out" : "set", quantity: String(b.quantity), reason: isExp ? t("inventoryAdmin.actionExpiredWriteOff") : "", type: isExp ? "EXPIRED_WRITE_OFF" : "ADJUSTMENT" }); }}>{t("inventoryAdmin.colAdjust")}</Button>
+                        <Button size="sm" variant="outline" onClick={() => { setAdjusting(b); setAdjForm({ mode: isExp ? "out" : "set", quantity: String(isExp ? Math.max(0, b.quantity - b.reserved) : b.quantity), reason: isExp ? t("inventoryAdmin.actionExpiredWriteOff") : "", type: isExp ? "EXPIRED_WRITE_OFF" : "ADJUSTMENT" }); }}>{t("inventoryAdmin.colAdjust")}</Button>
                       </td>
                     )}
                   </tr>

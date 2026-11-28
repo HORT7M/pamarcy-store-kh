@@ -19,7 +19,7 @@ export const PUT = apiHandler<{ id: string }>(async (req, { params }) => {
     data: {
       ...allowed,
       startsAt: b.startsAt ? parseDateInput(b.startsAt) : null,
-      endsAt: b.endsAt ? addDays(parseDateInput(b.endsAt), 1) : null,
+      endsAt: b.endsAt ? new Date(addDays(parseDateInput(b.endsAt), 1).getTime() - 1) : null,
     },
   });
   await audit(user.id, "discount.update", "Discount", id, { code: d.code });

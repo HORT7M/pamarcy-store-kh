@@ -2,7 +2,7 @@ import { apiHandler, parseBody, parseParams } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { requireStaff } from "@/lib/auth/session";
 import { idParamSchema, receiveSchema } from "@/lib/validators";
-import { stockIn } from "@/lib/services/inventory";
+import { sellableCutoff, stockIn } from "@/lib/services/inventory";
 import { parseDateInput } from "@/lib/date";
 import { audit } from "@/lib/audit";
 import { badRequest, conflict, notFound } from "@/lib/errors";
@@ -25,7 +25,7 @@ export const POST = apiHandler<{ id: string }>(async (req, { params }) => {
       const remaining = item.quantity - item.receivedQuantity;
       if (r.quantity > remaining) throw badRequest(`${item.medicine.nameEn}: cannot receive ${r.quantity}, only ${remaining} outstanding`);
       if (item.medicine.tracksExpiry && !r.expiryDate) throw badRequest(`${item.medicine.nameEn}: expiry date is required`);
-      if (r.expiryDate && parseDateInput(r.expiryDate) <= new Date()) throw badRequest(`${item.medicine.nameEn}: stock is already expired`);
+      if (r.expiryDate && parseDateInput(r.expiryDate) < sellableCutoff()) throw badRequest(`${item.medicine.nameEn}: stock is already expired`);
       await stockIn(tx, {
         medicineId: item.medicineId, batchNumber: r.batchNumber, lotNumber: r.lotNumber, quantity: r.quantity, costPrice: Number(item.unitCost),
         expiryDate: r.expiryDate ? parseDateInput(r.expiryDate) : null, manufactureDate: r.manufactureDate ? parseDateInput(r.manufactureDate) : null,

@@ -145,6 +145,6 @@ export const GET = apiHandler(async (req) => {
     prisma.order.count({ where: { customerId: user.customerId } }),
     prisma.order.findMany({ where: { customerId: user.customerId }, orderBy: { createdAt: "desc" }, skip: pg.skip, take: pg.take, include: { items: { select: publicItemSelect } } }),
   ]);
-  const orders = rawOrders.map(({ cashierId: _c, reviewedById: _r, notes: _n, ...o }) => o);
+  const orders = rawOrders.map(({ cashierId: _c, reviewedById: _r, notes: _n, ...o }) => { void _c; void _r; void _n; return o; });
   return { total, orders };
 });

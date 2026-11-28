@@ -91,7 +91,7 @@ export function CheckoutForm({ user, addresses }: { user: { name: string; email:
     }
   }
 
-  function validate() {
+  function validate(): Record<string, string> {
     const e: Record<string, string> = {};
     if (fullName.trim().length < 2) e.fullName = t("common.required");
     if (!isKhPhone(phone)) e.phone = t("checkout.invalidPhone");
@@ -102,12 +102,13 @@ export function CheckoutForm({ user, addresses }: { user: { name: string; email:
     if (!agree) e.agree = t("common.required");
     if (checkoutBot.visible && !checkoutBot.ready) e.bot = t("security.required");
     setErrors(e);
-    return Object.keys(e).length === 0;
+    return e;
   }
 
   async function submit(ev: React.FormEvent) {
     ev.preventDefault();
-    if (!validate()) return toast.error(t("common.error"), { description: Object.values(errors)[0] });
+    const nextErrors = validate();
+    if (Object.keys(nextErrors).length > 0) return toast.error(t("common.error"), { description: Object.values(nextErrors)[0] });
     setSubmitting(true);
     try {
       const r = await api<{ id: string; token: string | null }>("/api/orders", {
@@ -186,6 +187,7 @@ export function CheckoutForm({ user, addresses }: { user: { name: string; email:
                 {rxUrl ? t("checkout.uploaded") : pendingRxFile ? pendingRxFile.name : t("checkout.uploadRx")}
                 <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="sr-only" onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])} disabled={uploading} />
               </label>
+              {errors.rx && !rxUrl && <p className="text-xs text-red-600">{errors.rx}</p>}
               {!user && uploadBot.visible && (uploadBot.challenge?.provider !== "builtin" || uploadBot.challenge.mode !== "silent") && (
                 <div className="space-y-2">
                   <BotProtectionWidget bot={uploadBot} compact />
@@ -208,19 +210,23 @@ export function CheckoutForm({ user, addresses }: { user: { name: string; email:
 
         <div className="space-y-4 lg:sticky lg:top-36 lg:h-fit">
           <div className="space-y-3 rounded-2xl border bg-white p-4 shadow-sm">
-            {items.map((i) => (
-              <div key={i.medicineId} className="flex items-center gap-3 text-sm">
-                <div className="relative"><ProductImage src={i.imageUrl} alt={i.nameEn} className="size-12 rounded-lg" sizes="48px" /><span className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-foreground text-[10px] text-white">{i.quantity}</span></div>
-                <span className="line-clamp-2 flex-1">{pick(i, "name")}</span>
-                <span className="font-medium">{money(i.price * i.quantity)}</span>
-              </div>
-            ))}
+            {items.map((i) => {
+              const line = quote?.lines.find((l) => l.medicineId === i.medicineId);
+              return (
+                <div key={i.medicineId} className="flex items-center gap-3 text-sm">
+                  <div className="relative"><ProductImage src={line?.imageUrl ?? i.imageUrl} alt={i.nameEn} className="size-12 rounded-lg" sizes="48px" /><span className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-foreground text-[10px] text-white">{i.quantity}</span></div>
+                  <span className="line-clamp-2 flex-1">{pick(i, "name")}</span>
+                  <span className="font-medium">{money(line?.lineTotal ?? i.price * i.quantity)}</span>
+                </div>
+              );
+            })}
           </div>
           {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{tError(error)}</p>}
           <OrderSummary quote={quote} loading={loading} deliveryKnown={!!addr.province}>
             <BotProtectionWidget bot={checkoutBot} compact />
             {errors.bot && <p className="text-xs text-red-600">{errors.bot}</p>}
             <label className="flex items-start gap-2 text-xs text-muted-foreground"><Checkbox checked={agree} onCheckedChange={(v) => setAgree(!!v)} className="mt-0.5" aria-invalid={!!errors.agree} /> {t("checkout.agree")}</label>
+            {errors.agree && !agree && <p className="text-xs text-red-600">{errors.agree}</p>}
             <Button type="submit" size="lg" className="w-full rounded-full" disabled={submitting || loading || !quote?.stockOk || uploading || (checkoutBot.visible && checkoutBot.solving)}>
               {submitting ? <><Loader2 className="animate-spin" /> {t("checkout.placing")}</> : t("checkout.placeOrder")}
             </Button>

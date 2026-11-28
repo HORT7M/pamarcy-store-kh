@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Search } from "lucide-react";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/common/status-badge";
 import { PageHeader, Pagination } from "./common";
@@ -14,7 +15,7 @@ import { api } from "@/lib/fetcher";
 type CustRow = { id: string; spent: number; _count: { orders: number }; user: { name: string; email: string; phone: string | null; status: string; lastLoginAt: string | null; createdAt: string } };
 
 export function CustomersClient() {
-  const { money, t } = useI18n();
+  const { money, t, tError } = useI18n();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
@@ -24,8 +25,8 @@ export function CustomersClient() {
     const sp = new URLSearchParams({ page: String(page), pageSize: "20" });
     if (q) sp.set("q", q);
     if (status) sp.set("status", status);
-    api<typeof data>(`/api/admin/customers?${sp}`).then(setData);
-  }, [q, status, page]);
+    api<typeof data>(`/api/admin/customers?${sp}`).then(setData).catch((e) => toast.error(tError((e as Error).message)));
+  }, [q, status, page, tError]);
   useEffect(() => { const id = setTimeout(load, 200); return () => clearTimeout(id); }, [load]);
 
   return (

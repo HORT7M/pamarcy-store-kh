@@ -25,17 +25,33 @@ type Detail = {
 export function CustomerDetailClient({ id, canWrite }: { id: string; canWrite: boolean }) {
   const { money, t, tError } = useI18n();
   const [c, setC] = useState<Detail | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "", notes: "" });
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
-    api<Detail>(`/api/admin/customers/${id}`).then((d) => {
-      setC(d);
-      setForm({ name: d.user.name, email: d.user.email, phone: d.user.phone ?? "", notes: d.notes ?? "" });
-    });
-  }, [id]);
+    setLoadError(null);
+    api<Detail>(`/api/admin/customers/${id}`)
+      .then((d) => {
+        setC(d);
+        setForm({ name: d.user.name, email: d.user.email, phone: d.user.phone ?? "", notes: d.notes ?? "" });
+      })
+      .catch((e) => {
+        const msg = tError((e as Error).message);
+        setLoadError(msg);
+        toast.error(msg);
+      });
+  }, [id, tError]);
   useEffect(load, [load]);
 
+  if (loadError && !c) {
+    return (
+      <div className="space-y-4 py-12 text-center">
+        <p className="text-sm text-red-600">{loadError}</p>
+        <Link href="/admin/customers" className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"><ArrowLeft className="size-4" /> {t("customersAdmin.backToCustomers")}</Link>
+      </div>
+    );
+  }
   if (!c) return <div className="py-20 text-center"><Loader2 className="mx-auto animate-spin" /></div>;
 
   async function save(e: React.FormEvent) {

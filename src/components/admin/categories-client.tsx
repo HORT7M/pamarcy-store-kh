@@ -28,9 +28,9 @@ export function CategoriesClient() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
-    api<{ items: Cat[] }>("/api/admin/categories").then((r) => setCats(r.items));
-    api<{ items: Brand[] }>("/api/admin/brands").then((r) => setBrands(r.items));
-  }, []);
+    api<{ items: Cat[] }>("/api/admin/categories").then((r) => setCats(r.items)).catch((e) => toast.error(tError((e as Error).message)));
+    api<{ items: Brand[] }>("/api/admin/brands").then((r) => setBrands(r.items)).catch((e) => toast.error(tError((e as Error).message)));
+  }, [tError]);
   useEffect(load, [load]);
 
   function openCat(c?: Cat) {

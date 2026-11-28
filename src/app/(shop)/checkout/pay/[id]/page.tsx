@@ -31,7 +31,7 @@ export default async function PayPage({ params, searchParams }: { params: Promis
     where: { id },
     include: { items: true, payments: { orderBy: { createdAt: "desc" }, include: { method: { select: { code: true } } } } },
   });
-  const methods = (await availableMethods("online")).map(({ reason: _reason, ...m }) => m);
+  const methods = (await availableMethods("online")).map(({ reason: _reason, ...m }) => { void _reason; return m; });
   const active = order.payments.find((p) => ["PENDING", "PROCESSING", "PAID"].includes(p.status));
   const view = active ? await paymentView(active) : null;
   return (

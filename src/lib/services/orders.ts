@@ -6,7 +6,7 @@ import { round2, toNum } from "@/lib/money";
 import { nextNumber } from "@/lib/sequence";
 import { computeDeliveryFee, getSettings } from "@/lib/settings";
 import { findValidDiscount } from "./discounts";
-import { fulfillOrderItems, releaseOrderReservations, reserveForOrderItem, restockOrder } from "./inventory";
+import { fulfillOrderItems, getAvailability, releaseOrderReservations, reserveForOrderItem, restockOrder } from "./inventory";
 import { notifyStaff, notifyUser } from "./notifications";
 import { audit } from "@/lib/audit";
 import { verifyAndResolvePrescriptionClaim } from "@/lib/upload";
@@ -269,10 +269,19 @@ export async function cancelOrder(orderId: string, userId: string | null, reason
       await tx.payment.update({ where: { id: p.id }, data: { status: "EXPIRED", failureReason: "Order cancelled" } });
       await tx.paymentTransaction.create({ data: { paymentId: p.id, type: "EXPIRE", status: "ok", message: "Order cancelled" } });
     }
-    if (order.discountId) await tx.discount.update({ where: { id: order.discountId }, data: { usedCount: { decrement: 1 } } });
+    if (order.discountId) {
+      await tx.discount.updateMany({ where: { id: order.discountId, usedCount: { gt: 0 } }, data: { usedCount: { decrement: 1 } } });
+    }
     const u = await tx.order.update({
       where: { id: orderId },
-      data: { status: "CANCELLED", cancelReason: reason, cancelledAt: new Date(), reservationExpiresAt: null, paymentStatus: order.paymentStatus === "PENDING" ? "EXPIRED" : undefined },
+      data: {
+        status: "CANCELLED",
+        cancelReason: reason,
+        cancelledAt: new Date(),
+        reservationExpiresAt: null,
+        ...(order.fulfillmentStatus !== "UNFULFILLED" ? { fulfillmentStatus: "UNFULFILLED" } : {}),
+        paymentStatus: order.paymentStatus === "PENDING" || order.paymentStatus === "PROCESSING" ? "EXPIRED" : undefined,
+      },
     });
     await addHistory(tx, orderId, "CANCELLED", userId, reason);
     return u;
@@ -348,9 +357,12 @@ export async function checkLowStockForOrder(orderId: string) {
 
 export async function checkLowStock(medicineIds: string[]) {
   if (!medicineIds.length) return;
-  const inv = await prisma.inventory.findMany({ where: { medicineId: { in: medicineIds } }, include: { medicine: { select: { nameEn: true, sku: true } } } });
+  const [inv, avail] = await Promise.all([
+    prisma.inventory.findMany({ where: { medicineId: { in: medicineIds }, medicine: { deletedAt: null } }, include: { medicine: { select: { nameEn: true, sku: true } } } }),
+    getAvailability(prisma, medicineIds),
+  ]);
   for (const i of inv) {
-    const free = i.quantity - i.reserved;
+    const free = avail.get(i.medicineId) ?? 0;
     if (free <= i.minStock) {
       await notifyStaff({
         type: "STOCK_LOW",

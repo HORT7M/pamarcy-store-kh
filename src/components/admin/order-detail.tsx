@@ -41,6 +41,7 @@ export function AdminOrderDetail({ orderId, perms }: { orderId: string; perms: {
   const { locale, money, t, tryT, tError } = useI18n();
   const km = locale === "km";
   const [o, setO] = useState<Detail | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [rxNote, setRxNote] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -50,13 +51,28 @@ export function AdminOrderDetail({ orderId, perms }: { orderId: string; perms: {
   const [fulfilQtys, setFulfilQtys] = useState<Record<string, number>>({});
 
   const load = useCallback(() => {
-    api<Detail>(`/api/admin/orders/${orderId}`).then((d) => {
-      setO(d);
-      setFulfilQtys(Object.fromEntries(d.items.map((i) => [i.id, Math.max(0, i.quantity - i.fulfilledQuantity)])));
-    });
-  }, [orderId]);
+    setLoadError(null);
+    api<Detail>(`/api/admin/orders/${orderId}`)
+      .then((d) => {
+        setO(d);
+        setFulfilQtys(Object.fromEntries(d.items.map((i) => [i.id, Math.max(0, i.quantity - i.fulfilledQuantity)])));
+      })
+      .catch((e) => {
+        const msg = tError((e as Error).message);
+        setLoadError(msg);
+        toast.error(msg);
+      });
+  }, [orderId, tError]);
   useEffect(load, [load]);
 
+  if (loadError && !o) {
+    return (
+      <div className="space-y-4 py-12 text-center">
+        <p className="text-sm text-red-600">{loadError}</p>
+        <Link href="/admin/orders" className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"><ArrowLeft className="size-4" /> {t("ordersAdmin.backToOrders")}</Link>
+      </div>
+    );
+  }
   if (!o) return <div className="flex items-center justify-center py-20 text-muted-foreground"><Loader2 className="animate-spin" /></div>;
 
   const next = NEXT[o.status];
@@ -86,6 +102,8 @@ export function AdminOrderDetail({ orderId, perms }: { orderId: string; perms: {
   }
 
   async function fulfil() {
+    const totalPick = Object.values(fulfilQtys).reduce((s, n) => s + (Number(n) || 0), 0);
+    if (totalPick <= 0) return toast.error(tError("Enter at least one quantity to fulfil"));
     setBusy(true);
     try {
       await api(`/api/admin/orders/${orderId}/fulfil`, { method: "POST", body: { quantities: fulfilQtys } });
@@ -111,6 +129,7 @@ export function AdminOrderDetail({ orderId, perms }: { orderId: string; perms: {
       await api(`/api/admin/orders/${orderId}/refund`, { method: "POST", body: refundForm });
       toast.success(t("ordersAdmin.refundRecordedToast"));
       setRefundOpen(false);
+      setRefundForm({ reason: "", manualReference: "" });
       load();
     } catch (e) { toast.error(tError((e as Error).message)); }
     finally { setBusy(false); }

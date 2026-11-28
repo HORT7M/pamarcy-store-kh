@@ -8,7 +8,7 @@ export const GET = apiHandler(async () => {
   await requireStaff("inventory.read");
   const today = startOfDayPP();
   const batches = await prisma.medicineBatch.findMany({
-    where: { quantity: { gt: 0 }, expiryDate: { not: null, lte: addDays(today, 90) } },
+    where: { quantity: { gt: 0 }, expiryDate: { not: null, lte: addDays(today, 90) }, medicine: { deletedAt: null } },
     orderBy: { expiryDate: "asc" },
     include: { medicine: { select: { id: true, nameEn: true, nameKm: true, sku: true, price: true } }, supplier: { select: { name: true } } },
   });

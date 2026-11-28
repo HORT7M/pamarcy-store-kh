@@ -30,9 +30,9 @@ export function MarketingClient() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
-    api<{ items: Disc[] }>("/api/admin/discounts").then((r) => setDiscounts(r.items));
-    api<{ items: Banner[] }>("/api/admin/banners").then((r) => setBanners(r.items));
-  }, []);
+    api<{ items: Disc[] }>("/api/admin/discounts").then((r) => setDiscounts(r.items)).catch((e) => toast.error(tError((e as Error).message)));
+    api<{ items: Banner[] }>("/api/admin/banners").then((r) => setBanners(r.items)).catch((e) => toast.error(tError((e as Error).message)));
+  }, [tError]);
   useEffect(load, [load]);
 
   function openDisc(d?: Disc) {
@@ -51,7 +51,8 @@ export function MarketingClient() {
   }
   async function delDisc(id: string) {
     if (!confirm(t("marketingAdmin.confirmDeleteDiscount"))) return;
-    await api(`/api/admin/discounts/${id}`, { method: "DELETE" }); load();
+    try { await api(`/api/admin/discounts/${id}`, { method: "DELETE" }); toast.success(t("common.deleted")); load(); }
+    catch (e) { toast.error(tError((e as Error).message)); }
   }
 
   function openBanner(b?: Banner) {
@@ -77,7 +78,8 @@ export function MarketingClient() {
   }
   async function delBanner(id: string) {
     if (!confirm(t("marketingAdmin.confirmDeleteBanner"))) return;
-    await api(`/api/admin/banners/${id}`, { method: "DELETE" }); load();
+    try { await api(`/api/admin/banners/${id}`, { method: "DELETE" }); toast.success(t("common.deleted")); load(); }
+    catch (e) { toast.error(tError((e as Error).message)); }
   }
 
   return (

@@ -11,7 +11,7 @@ import { normalizeKhPhone } from "../../src/lib/phone.ts";
 import { roleHas } from "../../src/lib/auth/permissions.ts";
 import { generateKhqr } from "../../src/lib/services/payments/khqr.ts";
 import { isValidAddress, isValidTxHash, toUnits, fromUnits } from "../../src/lib/services/payments/usdt.ts";
-import { stockIn, reserveForOrderItem, releaseOrderReservations, getAvailability } from "../../src/lib/services/inventory.ts";
+import { stockIn, getAvailability } from "../../src/lib/services/inventory.ts";
 import { createOrder, cancelOrder } from "../../src/lib/services/orders.ts";
 import { addDays, startOfDayPP } from "../../src/lib/date.ts";
 

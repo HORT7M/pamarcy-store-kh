@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { cn } from "@/lib/utils";
 
@@ -10,7 +10,11 @@ export function SearchBar({ className, large }: { className?: string; large?: bo
   const router = useRouter();
   const sp = useSearchParams();
   const { t } = useI18n();
-  const [q, setQ] = useState(sp.get("q") ?? "");
+  const urlQ = sp.get("q") ?? "";
+  const [q, setQ] = useState(urlQ);
+  useEffect(() => {
+    setQ(urlQ);
+  }, [urlQ]);
   return (
     <form
       role="search"

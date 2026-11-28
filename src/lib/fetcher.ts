@@ -22,7 +22,18 @@ export async function api<T = unknown>(url: string, init: Omit<RequestInit, "bod
     credentials: "same-origin",
   });
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data: { error?: { message?: string; code?: string; details?: { retryAfter?: number } & Record<string, unknown> } } | null = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      if (!res.ok) {
+        const headerRetry = Number(res.headers.get("Retry-After") || 0);
+        throw new FetchError(res.status, `Request failed (${res.status})`, undefined, undefined, headerRetry > 0 ? headerRetry : undefined);
+      }
+      throw new FetchError(res.status, "Invalid server response");
+    }
+  }
   if (!res.ok) {
     const headerRetry = Number(res.headers.get("Retry-After") || 0);
     const detailRetry = Number(data?.error?.details?.retryAfter || 0);

@@ -26,7 +26,13 @@ export function PayClient({ order, token, methods, initialPayment, paypalReturn 
   const router = useRouter();
   const [payment, setPayment] = useState<PaymentViewDto | null>(initialPayment);
   const [method, setMethod] = useState<MethodDto["code"] | null>(initialPayment?.method ?? null);
-  const [currency, setCurrency] = useState<"USD" | "KHR">(initialPayment?.currency === "KHR" ? "KHR" : "USD");
+  const defaultKhqrCurrency: "USD" | "KHR" =
+    initialPayment?.currency === "KHR"
+      ? "KHR"
+      : methods.find((m) => m.code === "KHQR")?.currencies?.[0] === "KHR"
+        ? "KHR"
+        : "USD";
+  const [currency, setCurrency] = useState<"USD" | "KHR">(defaultKhqrCurrency);
   const [network, setNetwork] = useState<string | null>(initialPayment?.network?.code ?? null);
   const [creating, setCreating] = useState(false);
   const [paid, setPaid] = useState(order.paymentStatus === "PAID");
@@ -40,8 +46,14 @@ export function PayClient({ order, token, methods, initialPayment, paypalReturn 
     if (paypalReturn === "return" && payment?.method === "PAYPAL" && payment.status !== "PAID" && !captured.current) {
       captured.current = true;
       api<PaymentViewDto>(`/api/payments/${payment.id}/paypal-capture`, { method: "POST", headers: tokenHeaders })
-        .then(setPayment)
-        .catch((e) => toast.error(tError(e.message)))
+        .then((capturedPayment) => {
+          setPayment(capturedPayment);
+          if (capturedPayment.status === "PAID") {
+            setPaid(true);
+            router.refresh();
+          }
+        })
+        .catch((e) => toast.error(tError((e as Error).message)))
         .finally(() => router.replace(`/checkout/pay/${order.id}${q}`));
     }
   }, [paypalReturn, payment, q, tokenHeaders, order.id, router, t, tError]);

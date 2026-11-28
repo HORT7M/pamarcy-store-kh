@@ -20,17 +20,33 @@ type PoDetail = {
 export function PurchaseDetailClient({ id, canWrite }: { id: string; canWrite: boolean }) {
   const { money, t, tError } = useI18n();
   const [po, setPo] = useState<PoDetail | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [rows, setRows] = useState<Record<string, { quantity: string; batchNumber: string; lotNumber: string; expiryDate: string }>>({});
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
-    api<PoDetail>(`/api/admin/purchases/${id}`).then((d) => {
-      setPo(d);
-      setRows(Object.fromEntries(d.items.map((i, idx) => [i.id, { quantity: String(Math.max(0, i.quantity - i.receivedQuantity)), batchNumber: `B-${d.number.slice(-4)}-${idx + 1}`, lotNumber: "", expiryDate: "" }])));
-    });
-  }, [id]);
+    setLoadError(null);
+    api<PoDetail>(`/api/admin/purchases/${id}`)
+      .then((d) => {
+        setPo(d);
+        setRows(Object.fromEntries(d.items.map((i, idx) => [i.id, { quantity: String(Math.max(0, i.quantity - i.receivedQuantity)), batchNumber: `B-${d.number.slice(-4)}-${idx + 1}`, lotNumber: "", expiryDate: "" }])));
+      })
+      .catch((e) => {
+        const msg = tError((e as Error).message);
+        setLoadError(msg);
+        toast.error(msg);
+      });
+  }, [id, tError]);
   useEffect(load, [load]);
 
+  if (loadError && !po) {
+    return (
+      <div className="space-y-4 py-12 text-center">
+        <p className="text-sm text-red-600">{loadError}</p>
+        <Link href="/admin/purchases" className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"><ArrowLeft className="size-4" /> {t("purchasesAdmin.backToPurchases")}</Link>
+      </div>
+    );
+  }
   if (!po) return <div className="py-20 text-center"><Loader2 className="mx-auto animate-spin" /></div>;
 
   const canReceive = canWrite && (po.status === "ORDERED" || po.status === "PARTIALLY_RECEIVED");
@@ -43,6 +59,10 @@ export function PurchaseDetailClient({ id, canWrite }: { id: string; canWrite: b
       const items = po.items
         .map((i) => ({ purchaseItemId: i.id, quantity: Number(rows[i.id]?.quantity || 0), batchNumber: rows[i.id]?.batchNumber ?? "", lotNumber: rows[i.id]?.lotNumber || null, expiryDate: rows[i.id]?.expiryDate || null }))
         .filter((x) => x.quantity > 0);
+      if (!items.length) {
+        toast.error(tError("Enter at least one received quantity"));
+        return;
+      }
       await api(`/api/admin/purchases/${id}/receive`, { method: "POST", body: { items } });
       toast.success(t("purchasesAdmin.receivedToast"));
       load();

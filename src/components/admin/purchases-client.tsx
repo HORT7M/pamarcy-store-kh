@@ -38,8 +38,10 @@ export function PurchasesClient({ suppliers, medicines, canWrite }: { suppliers:
     const sp = new URLSearchParams({ page: String(page), pageSize: "20" });
     if (q) sp.set("q", q);
     if (status) sp.set("status", status);
-    api<typeof data>(`/api/admin/purchases?${sp}`).then(setData);
-  }, [q, status, page]);
+    api<typeof data>(`/api/admin/purchases?${sp}`)
+      .then(setData)
+      .catch((e) => toast.error(tError((e as Error).message)));
+  }, [q, status, page, tError]);
   useEffect(() => { const id = setTimeout(load, 200); return () => clearTimeout(id); }, [load]);
 
   const subtotal = lines.reduce((s, l) => s + (Number(l.quantity) || 0) * (Number(l.unitCost) || 0), 0);
@@ -122,7 +124,7 @@ export function PurchasesClient({ suppliers, medicines, canWrite }: { suppliers:
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between"><Label>{t("purchasesAdmin.medicinesLabel")}</Label><Button type="button" size="sm" variant="outline" onClick={() => setLines([...lines, { medicineId: medicines[0]?.id ?? "", quantity: "20", unitCost: medicines[0]?.costPrice ?? "1" }])}><Plus className="size-3.5" /> {t("purchasesAdmin.addRow")}</Button></div>
+              <div className="flex items-center justify-between"><Label>{t("purchasesAdmin.medicinesLabel")}</Label><Button type="button" size="sm" variant="outline" onClick={() => { const next = medicines.find((m) => !lines.some((l) => l.medicineId === m.id)) ?? medicines[0]; setLines([...lines, { medicineId: next?.id ?? "", quantity: "20", unitCost: next?.costPrice ?? "1" }]); }}><Plus className="size-3.5" /> {t("purchasesAdmin.addRow")}</Button></div>
               {lines.map((l, idx) => (
                 <div key={idx} className="grid grid-cols-[1fr_90px_110px_36px] items-center gap-2">
                   <select className={sel} value={l.medicineId} onChange={(e) => { const m = medicines.find((x) => x.id === e.target.value); setLines(lines.map((r, i) => (i === idx ? { ...r, medicineId: e.target.value, unitCost: m?.costPrice ?? r.unitCost } : r))); }}>

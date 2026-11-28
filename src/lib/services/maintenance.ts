@@ -12,7 +12,7 @@ import { sweepPayments } from "./payments";
 export async function checkExpiry() {
   const today = startOfDayPP();
   const batches = await prisma.medicineBatch.findMany({
-    where: { quantity: { gt: 0 }, expiryDate: { not: null, lte: addDays(today, 30) } },
+    where: { quantity: { gt: 0 }, expiryDate: { not: null, lte: addDays(today, 30) }, medicine: { deletedAt: null } },
     include: { medicine: { select: { nameEn: true, sku: true } } },
   });
   const day = dayKey(new Date());

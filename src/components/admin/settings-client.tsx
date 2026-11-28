@@ -35,7 +35,7 @@ export function SettingsClient({ canStore, canPayments }: { canStore: boolean; c
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
-    if (canStore) api<StoreSettings>("/api/admin/settings/store").then(setStore);
+    if (canStore) api<StoreSettings>("/api/admin/settings/store").then(setStore).catch((e) => toast.error(tError((e as Error).message)));
     if (canPayments) {
       api<PaySettingsPayload>("/api/admin/settings/payments").then((d) => {
         setPayInfo(d);
@@ -53,9 +53,9 @@ export function SettingsClient({ canStore, canPayments }: { canStore: boolean; c
         if (p) setPaypal({ enabled: p.enabled, online: p.online, pos: p.pos, brandName: (p.config as { brandName?: string }).brandName ?? "Pamarcy Store" });
         const c = d.methods.find((m) => m.code === "CASH");
         if (c) setCash({ enabled: c.enabled, pos: c.pos });
-      });
+      }).catch((e) => toast.error(tError((e as Error).message)));
     }
-  }, [canStore, canPayments]);
+  }, [canStore, canPayments, tError]);
   useEffect(load, [load]);
 
   async function saveStore(e: React.FormEvent) {
@@ -171,7 +171,7 @@ export function SettingsClient({ canStore, canPayments }: { canStore: boolean; c
                 <label className="flex items-center gap-2"><Checkbox checked={khqr.pos} onCheckedChange={(v) => setKhqr({ ...khqr, pos: !!v })} /> {t("settingsAdmin.posChannel")}</label>
                 {(["USD", "KHR"] as const).map((c) => (
                   <label key={c} className="flex items-center gap-2">
-                    <Checkbox checked={khqr.currencies.includes(c)} onCheckedChange={(v) => setKhqr({ ...khqr, currencies: v ? [...khqr.currencies, c] : khqr.currencies.filter((x) => x !== c) })} /> {t("settingsAdmin.acceptCurrency", { currency: c })}
+                    <Checkbox checked={khqr.currencies.includes(c)} onCheckedChange={(v) => setKhqr({ ...khqr, currencies: v ? Array.from(new Set([...khqr.currencies, c])) : khqr.currencies.filter((x) => x !== c) })} /> {t("settingsAdmin.acceptCurrency", { currency: c })}
                   </label>
                 ))}
               </div>

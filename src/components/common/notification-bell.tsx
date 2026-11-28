@@ -25,7 +25,7 @@ export function NotificationBell({ className }: { className?: string }) {
     return () => clearInterval(id);
   }, [load]);
   async function markAll() {
-    await api("/api/account/notifications", { method: "POST", body: {} });
+    await api("/api/account/notifications", { method: "POST", body: {} }).catch(() => {});
     load();
   }
   return (
@@ -54,7 +54,7 @@ export function NotificationBell({ className }: { className?: string }) {
               </div>
             );
             return safeLink ? (
-              <Link key={n.id} href={safeLink} onClick={() => api("/api/account/notifications", { method: "POST", body: { ids: [n.id] } }).then(load)}>
+              <Link key={n.id} href={safeLink} onClick={() => void api("/api/account/notifications", { method: "POST", body: { ids: [n.id] } }).then(load).catch(() => {})}>
                 {body}
               </Link>
             ) : (

@@ -1,7 +1,7 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./db";
-import { getAvailability } from "./services/inventory";
+import { getAvailability, sellableCutoff } from "./services/inventory";
 import { toNum } from "./money";
 
 export type ProductCard = {
@@ -46,7 +46,7 @@ export async function searchProducts(p: ProductQuery) {
   if (p.rx === "otc") and.push({ requiresPrescription: false });
   if (p.featured) and.push({ isFeatured: true });
   if (p.offers) and.push({ compareAtPrice: { not: null } });
-  if (p.inStock) and.push({ inventory: { quantity: { gt: 0 } }, batches: { some: { quantity: { gt: 0 }, OR: [{ expiryDate: null }, { expiryDate: { gte: new Date() } }] } } });
+  if (p.inStock) and.push({ inventory: { quantity: { gt: 0 } }, batches: { some: { quantity: { gt: 0 }, OR: [{ expiryDate: null }, { expiryDate: { gte: sellableCutoff() } }] } } });
   if (and.length) where.AND = and;
   const orderBy: Prisma.MedicineOrderByWithRelationInput[] =
     p.sort === "newest" ? [{ createdAt: "desc" }] : p.sort === "price_asc" ? [{ price: "asc" }] : p.sort === "price_desc" ? [{ price: "desc" }] : p.sort === "name" ? [{ nameEn: "asc" }] : [{ soldCount: "desc" }, { nameEn: "asc" }];

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Search } from "lucide-react";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader, Pagination } from "./common";
@@ -13,7 +14,7 @@ import { api } from "@/lib/fetcher";
 type Mv = { id: string; type: string; quantity: number; balanceAfter: number | null; unitCost: string | null; reference: string | null; reason: string | null; createdAt: string; userName: string | null; medicine: { nameEn: string; sku: string }; batch: { batchNumber: string } | null };
 
 export function MovementsClient() {
-  const { t, tryT } = useI18n();
+  const { t, tryT, tError } = useI18n();
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
   const [page, setPage] = useState(1);
@@ -23,8 +24,8 @@ export function MovementsClient() {
     const sp = new URLSearchParams({ page: String(page), pageSize: "30" });
     if (q) sp.set("q", q);
     if (type) sp.set("type", type);
-    api<typeof data>(`/api/admin/inventory/movements?${sp}`).then(setData);
-  }, [q, type, page]);
+    api<typeof data>(`/api/admin/inventory/movements?${sp}`).then(setData).catch((e) => toast.error(tError((e as Error).message)));
+  }, [q, type, page, tError]);
   useEffect(() => { const id = setTimeout(load, 200); return () => clearTimeout(id); }, [load]);
 
   return (

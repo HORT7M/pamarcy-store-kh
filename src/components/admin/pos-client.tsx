@@ -35,8 +35,10 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
   const [manualDiscount, setManualDiscount] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [method, setMethod] = useState<MethodDto["code"]>("CASH");
-  const [khqrCurrency, setKhqrCurrency] = useState<"USD" | "KHR">("USD");
+  const [method, setMethod] = useState<MethodDto["code"]>(methods.find((m) => m.ready)?.code ?? "CASH");
+  const [khqrCurrency, setKhqrCurrency] = useState<"USD" | "KHR">(
+    methods.find((m) => m.code === "KHQR")?.currencies?.[0] === "KHR" ? "KHR" : "USD",
+  );
   const [usdtNetwork, setUsdtNetwork] = useState<string>(methods.find((m) => m.code === "USDT")?.networks?.[0]?.code ?? "TRC20");
   const [sale, setSale] = useState<ActiveSale | null>(null);
   const [tendered, setTendered] = useState("");
@@ -143,6 +145,7 @@ export function PosClient({ initialProducts, categories, methods, exchangeRate, 
   function finishAndReset() {
     setSale(null);
     setCart([]);
+    setScan("");
     setDiscountCode("");
     setManualDiscount("");
     setCustomerName("");

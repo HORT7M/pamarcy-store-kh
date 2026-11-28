@@ -39,8 +39,8 @@ export function SuppliersClient({ canWrite }: { canWrite: boolean }) {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
-    api<{ items: Supplier[] }>(`/api/admin/suppliers${q ? `?q=${encodeURIComponent(q)}` : ""}`).then((r) => setItems(r.items));
-  }, [q]);
+    api<{ items: Supplier[] }>(`/api/admin/suppliers${q ? `?q=${encodeURIComponent(q)}` : ""}`).then((r) => setItems(r.items)).catch((e) => toast.error(tError((e as Error).message)));
+  }, [q, tError]);
   useEffect(() => { const id = setTimeout(load, 200); return () => clearTimeout(id); }, [load]);
 
   function openEdit(s?: Supplier) {

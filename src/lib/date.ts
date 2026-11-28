@@ -11,6 +11,7 @@ function parts(d: Date, opts: Intl.DateTimeFormatOptions) {
 export function formatDate(v: Date | string | null | undefined): string {
   if (!v) return "—";
   const d = typeof v === "string" ? new Date(v) : v;
+  if (Number.isNaN(d.getTime())) return "—";
   const p = parts(d, { day: "2-digit", month: "2-digit", year: "numeric" });
   return `${p.day}/${p.month}/${p.year}`;
 }
@@ -19,6 +20,7 @@ export function formatDate(v: Date | string | null | undefined): string {
 export function formatDateTime(v: Date | string | null | undefined): string {
   if (!v) return "—";
   const d = typeof v === "string" ? new Date(v) : v;
+  if (Number.isNaN(d.getTime())) return "—";
   const p = parts(d, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
   return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
 }

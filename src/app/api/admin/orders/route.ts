@@ -41,7 +41,7 @@ export const GET = apiHandler(async (req) => {
   if (p.q) {
     // Order contact fields (fullName, phone, email) are AES-256-GCM encrypted at rest
     const needle = p.q.trim().toLowerCase();
-    const phoneNeedle = p.q.trim().replace(/^0/, "").toLowerCase();
+    const phoneNeedle = p.q.replace(/[\s\-()]/g, "").replace(/^0/, "").toLowerCase();
     const [all, counts] = await Promise.all([
       prisma.order.findMany({ where, orderBy: { createdAt: "desc" }, take: 2000, select: orderListSelect }),
       prisma.order.groupBy({ by: ["status"], _count: true }),

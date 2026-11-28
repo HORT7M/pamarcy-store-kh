@@ -32,8 +32,8 @@ export function PaymentsLedgerClient() {
     if (q) sp.set("q", q);
     if (method) sp.set("method", method);
     if (status) sp.set("status", status);
-    api<typeof data>(`/api/admin/payments?${sp}`).then(setData);
-  }, [q, method, status, page]);
+    api<typeof data>(`/api/admin/payments?${sp}`).then(setData).catch((e) => toast.error(tError((e as Error).message)));
+  }, [q, method, status, page, tError]);
   useEffect(() => { const id = setTimeout(load, 200); return () => clearTimeout(id); }, [load]);
 
   async function check(id: string) {

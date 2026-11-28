@@ -88,8 +88,8 @@ export async function stockOverview() {
       COUNT(*) FILTER (WHERE sellable > 0 AND sellable <= min)::int AS low,
       COUNT(*) FILTER (WHERE sellable <= 0)::int AS out,
       COUNT(*) FILTER (WHERE sellable > min)::int AS healthy,
-      (SELECT COUNT(*) FROM "MedicineBatch" WHERE quantity > 0 AND "expiryDate" < ${cutoff})::int AS "expiredBatches",
-      (SELECT COUNT(*) FROM "MedicineBatch" WHERE quantity > 0 AND "expiryDate" >= ${cutoff} AND "expiryDate" < ${addDays(cutoff, 30)})::int AS "expiringSoon",
+      (SELECT COUNT(*) FROM "MedicineBatch" b JOIN "Medicine" m ON m.id = b."medicineId" WHERE m."deletedAt" IS NULL AND b.quantity > 0 AND b."expiryDate" < ${cutoff})::int AS "expiredBatches",
+      (SELECT COUNT(*) FROM "MedicineBatch" b JOIN "Medicine" m ON m.id = b."medicineId" WHERE m."deletedAt" IS NULL AND b.quantity > 0 AND b."expiryDate" >= ${cutoff} AND b."expiryDate" < ${addDays(cutoff, 30)})::int AS "expiringSoon",
       COALESCE(SUM(cost),0)::float AS "costValue", COALESCE(SUM(units * price),0)::float AS "retailValue"
     FROM s`;
   return r;
@@ -212,7 +212,7 @@ export async function buildReport(type: ReportType, from: Date, to: Date, g: Gra
       };
     }
     case "expiry": {
-      const b = await prisma.medicineBatch.findMany({ where: { quantity: { gt: 0 }, expiryDate: { not: null, lt: addDays(startOfDayPP(), 91) } }, orderBy: { expiryDate: "asc" }, include: { medicine: true } });
+      const b = await prisma.medicineBatch.findMany({ where: { quantity: { gt: 0 }, expiryDate: { not: null, lt: addDays(startOfDayPP(), 91) }, medicine: { deletedAt: null } }, orderBy: { expiryDate: "asc" }, include: { medicine: true } });
       const today = startOfDayPP();
       return {
         title: `Expiration report · ${formatDate(new Date())}`, columns: ["SKU", "Medicine", "Batch", "Expiry", "Days left", "Qty", "Cost value (USD)"],

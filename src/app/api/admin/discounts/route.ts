@@ -19,7 +19,7 @@ export const POST = apiHandler(async (req) => {
     data: {
       ...allowed,
       startsAt: b.startsAt ? parseDateInput(b.startsAt) : null,
-      endsAt: b.endsAt ? addDays(parseDateInput(b.endsAt), 1) : null,
+      endsAt: b.endsAt ? new Date(addDays(parseDateInput(b.endsAt), 1).getTime() - 1) : null,
     },
   });
   await audit(user.id, "discount.create", "Discount", d.id, { code: d.code });

@@ -12,11 +12,12 @@ export const GET = apiHandler(async (req) => {
   const cutoff = sellableCutoff();
   const rawQ = p.q?.trim() || null;
   const pattern = rawQ ? `%${escapeLike(rawQ)}%` : null;
-  const rows = await prisma.$queryRaw<{ id: string; sku: string; nameEn: string; nameKm: string; imageUrl: string | null; minStock: number; location: string | null; onHand: number; reserved: number; expired: number; costValue: number; retailValue: number; nearestExpiry: Date | null; batches: number }[]>`
+  const rows = await prisma.$queryRaw<{ id: string; sku: string; nameEn: string; nameKm: string; imageUrl: string | null; minStock: number; location: string | null; onHand: number; reserved: number; expired: number; sellable: number; costValue: number; retailValue: number; nearestExpiry: Date | null; batches: number }[]>`
     SELECT m.id, m.sku, m."nameEn", m."nameKm", m."imageUrl", COALESCE(i."minStock", 0)::int AS "minStock", i.location,
       COALESCE(SUM(b.quantity), 0)::int AS "onHand",
       COALESCE(SUM(b.reserved), 0)::int AS reserved,
       COALESCE(SUM(CASE WHEN b."expiryDate" < ${cutoff} THEN b.quantity ELSE 0 END), 0)::int AS expired,
+      COALESCE(SUM(CASE WHEN b."expiryDate" IS NULL OR b."expiryDate" >= ${cutoff} THEN GREATEST(0, b.quantity - b.reserved) ELSE 0 END), 0)::int AS sellable,
       COALESCE(SUM(b.quantity * b."costPrice"), 0)::float AS "costValue",
       COALESCE(SUM(b.quantity) * m.price, 0)::float AS "retailValue",
       MIN(CASE WHEN b.quantity > 0 AND b."expiryDate" >= ${cutoff} THEN b."expiryDate" END) AS "nearestExpiry",
@@ -28,7 +29,7 @@ export const GET = apiHandler(async (req) => {
       AND (${pattern}::text IS NULL OR m."nameEn" ILIKE ${pattern} ESCAPE '\\' OR m.sku ILIKE ${pattern} ESCAPE '\\' OR m."nameKm" ILIKE ${pattern} ESCAPE '\\' OR m.barcode = ${rawQ})
     GROUP BY m.id, i."minStock", i.location
     ORDER BY m."nameEn"`;
-  const enriched = rows.map((r) => ({ ...r, sellable: Math.max(0, r.onHand - r.expired - r.reserved) }));
+  const enriched = rows;
   const filtered = enriched.filter((r) =>
     p.filter === "low" ? r.sellable <= r.minStock && r.sellable > 0 : p.filter === "out" ? r.sellable <= 0 : p.filter === "expired" ? r.expired > 0 : true,
   );

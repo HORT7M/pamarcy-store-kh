@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Search } from "lucide-react";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader, Pagination } from "./common";
@@ -13,7 +14,7 @@ import { api } from "@/lib/fetcher";
 type LogRow = { id: string; action: string; entity: string; entityId: string | null; meta: unknown; ip: string | null; createdAt: string; user: { name: string } | null };
 
 export function AuditClient() {
-  const { t, tryT } = useI18n();
+  const { t, tryT, tError } = useI18n();
   const [q, setQ] = useState("");
   const [entity, setEntity] = useState("");
   const [page, setPage] = useState(1);
@@ -23,8 +24,8 @@ export function AuditClient() {
     const sp = new URLSearchParams({ page: String(page), pageSize: "30" });
     if (q) sp.set("q", q);
     if (entity) sp.set("entity", entity);
-    api<typeof data>(`/api/admin/audit?${sp}`).then(setData);
-  }, [q, entity, page]);
+    api<typeof data>(`/api/admin/audit?${sp}`).then(setData).catch((e) => toast.error(tError((e as Error).message)));
+  }, [q, entity, page, tError]);
   useEffect(() => { const id = setTimeout(load, 200); return () => clearTimeout(id); }, [load]);
 
   return (

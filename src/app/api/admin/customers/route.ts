@@ -20,7 +20,7 @@ export const GET = apiHandler(async (req) => {
   if (p.q) {
     // User PII (name, email, phone) is AES-256-GCM encrypted at rest; filter decrypted rows safely
     const needle = p.q.trim().toLowerCase();
-    const phoneNeedle = p.q.trim().replace(/^0/, "").toLowerCase();
+    const phoneNeedle = p.q.replace(/[\s\-()]/g, "").replace(/^0/, "").toLowerCase();
     const all = await prisma.customer.findMany({ where, orderBy: { createdAt: "desc" }, take: 2000, select: customerSelect });
     const matched = all.filter((c) =>
       c.user.name.toLowerCase().includes(needle) ||

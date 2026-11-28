@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 type Order = {
   id: string; number: string; channel?: string; status: string; paymentStatus: string; fulfillmentStatus: string; prescriptionStatus: string; prescriptionNote: string | null; createdAt: string;
   subtotal: string; discountAmount: string; deliveryFee: string; total: string; fullName: string; phone: string; address: string; instructions: string | null; cancelReason: string | null;
-  items: { id: string; nameEn: string; nameKm: string; sku: string; quantity: number; fulfilledQuantity: number; unitPrice: string; lineTotal: string; medicineId: string }[];
+  items: { id: string; nameEn: string; nameKm: string; sku: string; quantity: number; fulfilledQuantity: number; unitPrice: string; lineTotal: string; medicineId: string; slug?: string; imageUrl?: string | null; requiresPrescription?: boolean }[];
   history: { id: string; status: string; note: string | null; createdAt: string }[];
   payments: { id: string; reference: string; method: string; status: string; currency: string; amount: string; createdAt: string; paidAt: string | null; providerTxnId: string | null }[];
 };
@@ -49,7 +49,7 @@ export function OrderDetailClient({ order: o }: { order: Order }) {
   }
 
   function reorder() {
-    for (const i of o.items) add({ medicineId: i.medicineId, slug: "", nameEn: i.nameEn, nameKm: i.nameKm, imageUrl: null, price: Number(i.unitPrice), maxQty: 999, requiresPrescription: false }, i.quantity);
+    for (const i of o.items) add({ medicineId: i.medicineId, slug: i.slug ?? "", nameEn: i.nameEn, nameKm: i.nameKm, imageUrl: i.imageUrl ?? null, price: Number(i.unitPrice), maxQty: 999, requiresPrescription: Boolean(i.requiresPrescription) }, i.quantity);
     router.push("/cart");
   }
 

@@ -36,6 +36,7 @@ export const GET = apiHandler<{ id: string }>(async (req, { params }) => {
   });
   const payments = await Promise.all(order.payments.map((p) => paymentView(p)));
   const { cashierId: _c, reviewedById: _r, notes: _n, ...safeOrder } = order;
+  void _c; void _r; void _n;
   const canViewRx = !user?.isStaff || roleHas(user.role, "prescriptions.review");
   return {
     ...safeOrder,

@@ -193,7 +193,7 @@ export function MedicineForm({ initial, categories, brands, canWrite = true, can
             <ProductImage src={f.imageUrl || null} alt={f.nameEn || t("medicinesAdmin.colMedicine")} className="aspect-[4/3] w-full rounded-xl border" />
             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed p-3 text-sm font-medium text-primary hover:bg-secondary/40">
               {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />} {t("medicinesAdmin.uploadPhoto")}
-              <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0])} disabled={uploading} />
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0])} disabled={uploading || !canWrite} />
             </label>
             <Input value={f.imageUrl} onChange={(e) => set("imageUrl", e.target.value)} placeholder={t("medicinesAdmin.orImageUrl")} className="text-xs" />
           </section>

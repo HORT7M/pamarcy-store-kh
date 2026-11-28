@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Minus, Plus, Trash2, ShoppingBag, AlertTriangle, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/components/providers/cart-provider";
@@ -21,6 +21,9 @@ export default function CartPage() {
   const { items, setQty, remove, ready, discountCode, setDiscountCode } = useCart();
   const { t, tError, pick, money } = useI18n();
   const [code, setCode] = useState(discountCode);
+  useEffect(() => {
+    if (ready) setCode(discountCode);
+  }, [ready, discountCode]);
   const [attemptKey, setAttemptKey] = useState(0);
   const [pendingBotPayload, setPendingBotPayload] = useState<ClientBotPayload | undefined>(undefined);
   const promoBot = useBotProtection("promo_code", { autoLoad: false });
@@ -60,12 +63,24 @@ export default function CartPage() {
           {items.map((i) => {
             const line = quote?.lines.find((l) => l.medicineId === i.medicineId);
             const short = line && line.available < i.quantity;
+            const slug = line?.slug || i.slug;
+            const imageUrl = line?.imageUrl ?? i.imageUrl;
+            const requiresRx = line?.requiresPrescription ?? i.requiresPrescription;
+            const productHref = slug ? `/product/${encodeURIComponent(slug)}` : null;
             return (
               <div key={i.medicineId} className="flex gap-4 rounded-2xl border bg-white p-3 shadow-sm">
-                <Link href={`/product/${i.slug}`}><ProductImage src={i.imageUrl} alt={i.nameEn} className="size-20 shrink-0 rounded-xl sm:size-24" sizes="96px" /></Link>
+                {productHref ? (
+                  <Link href={productHref}><ProductImage src={imageUrl} alt={i.nameEn} className="size-20 shrink-0 rounded-xl sm:size-24" sizes="96px" /></Link>
+                ) : (
+                  <ProductImage src={imageUrl} alt={i.nameEn} className="size-20 shrink-0 rounded-xl sm:size-24" sizes="96px" />
+                )}
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <Link href={`/product/${i.slug}`} className="line-clamp-2 text-sm font-semibold hover:text-primary">{pick(i, "name")}</Link>
-                  {i.requiresPrescription && <span className="flex items-center gap-1 text-xs text-amber-700"><AlertTriangle className="size-3" /> {t("product.rxRequired")}</span>}
+                  {productHref ? (
+                    <Link href={productHref} className="line-clamp-2 text-sm font-semibold hover:text-primary">{pick(i, "name")}</Link>
+                  ) : (
+                    <span className="line-clamp-2 text-sm font-semibold">{pick(i, "name")}</span>
+                  )}
+                  {requiresRx && <span className="flex items-center gap-1 text-xs text-amber-700"><AlertTriangle className="size-3" /> {t("product.rxRequired")}</span>}
                   <div className="text-sm text-muted-foreground">{money(line?.unitPrice ?? i.price)}</div>
                   {short && <div className="text-xs font-medium text-red-600">{line.available === 0 ? t("common.outOfStock") : t("cart.stockIssue", { n: line.available })}</div>}
                   <div className="mt-auto flex items-center justify-between gap-2">
@@ -94,9 +109,15 @@ export default function CartPage() {
           {quote?.discountError && <p className="-mt-2 px-1 text-xs text-red-600">{tError(quote.discountError)}</p>}
           {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{tError(error)}</p>}
           <OrderSummary quote={quote} loading={loading} deliveryKnown={false}>
-            <Button asChild size="lg" className="w-full rounded-full" disabled={!quote?.stockOk}>
-              {quote?.stockOk ? <Link href="/checkout">{t("cart.checkout")}</Link> : <span>{t("cart.checkout")}</span>}
-            </Button>
+            {quote?.stockOk ? (
+              <Button asChild size="lg" className="w-full rounded-full">
+                <Link href="/checkout">{t("cart.checkout")}</Link>
+              </Button>
+            ) : (
+              <Button size="lg" className="w-full rounded-full" disabled>
+                {t("cart.checkout")}
+              </Button>
+            )}
             {quote && !quote.stockOk && <p className="text-center text-xs text-red-600">{t("common.outOfStock")}</p>}
             <Link href="/shop" className="block text-center text-sm text-primary hover:underline">{t("cart.continue")}</Link>
           </OrderSummary>

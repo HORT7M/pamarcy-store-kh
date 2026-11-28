@@ -20,7 +20,7 @@ export function ExpiryClient({ canWrite }: { canWrite: boolean }) {
   const km = locale === "km";
   const [data, setData] = useState<Data | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const load = useCallback(() => { api<Data>("/api/admin/inventory/expiry").then(setData); }, []);
+  const load = useCallback(() => { api<Data>("/api/admin/inventory/expiry").then(setData).catch((e) => toast.error(tError((e as Error).message))); }, [tError]);
   useEffect(load, [load]);
 
   async function writeOff(b: ExBatch) {

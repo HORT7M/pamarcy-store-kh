@@ -55,6 +55,7 @@ export default async function EditMedicinePage({ params }: { params: Promise<{ i
         </TabsList>
         <TabsContent value="details">
           <MedicineForm
+            canWrite={can(user, "medicines.write")}
             canDelete={can(user, "medicines.delete")}
             categories={cats.map((c) => ({ id: c.id, name: localizeCategoryName(c, locale, tryT) }))}
             brands={brands}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Plus, Search, AlertTriangle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +19,7 @@ type MedRow = {
 };
 
 export function MedicinesClient({ categories, canWrite }: { categories: { id: string; slug: string; nameEn: string; nameKm: string }[]; canWrite: boolean }) {
-  const { locale, money, t, catName } = useI18n();
+  const { locale, money, t, tError, catName } = useI18n();
   const km = locale === "km";
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
@@ -37,8 +38,9 @@ export function MedicinesClient({ categories, canWrite }: { categories: { id: st
     if (rx) sp.set("rx", rx);
     api<{ total: number; pageSize: number; items: MedRow[] }>(`/api/admin/medicines?${sp}`)
       .then(setData)
+      .catch((e) => toast.error(tError((e as Error).message)))
       .finally(() => setLoading(false));
-  }, [q, category, status, rx, page]);
+  }, [q, category, status, rx, page, tError]);
 
   useEffect(() => {
     const id = setTimeout(load, 200);

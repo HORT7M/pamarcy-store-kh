@@ -31,7 +31,17 @@ function CopyRow({ label, value, mono }: { label: string; value: string; mono?: 
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">
         <span className={mono ? "flex-1 break-all font-mono text-xs" : "flex-1 font-semibold"}>{value}</span>
-        <button type="button" onClick={() => { navigator.clipboard.writeText(value); toast.success(t("common.copied")); }} className="rounded p-1 hover:bg-white" aria-label={t("common.copy")}><Copy className="size-4" /></button>
+        <button
+          type="button"
+          onClick={() => {
+            if (!navigator.clipboard?.writeText) return;
+            navigator.clipboard.writeText(value).then(() => toast.success(t("common.copied"))).catch(() => {});
+          }}
+          className="rounded p-1 hover:bg-white"
+          aria-label={t("common.copy")}
+        >
+          <Copy className="size-4" />
+        </button>
       </div>
     </div>
   );
@@ -52,7 +62,10 @@ export function PaymentPanel({ payment: initial, checkUrl, hashUrl, captureUrl, 
   const left = useCountdown(p.status === "PENDING" ? p.expiresAt : null);
   const paidFired = useRef(false);
 
-  useEffect(() => setP(initial), [initial]);
+  useEffect(() => {
+    setP(initial);
+    paidFired.current = false;
+  }, [initial]);
   useEffect(() => {
     if (p.status === "PAID" && !paidFired.current) { paidFired.current = true; onPaid?.(p); }
   }, [p, onPaid]);
